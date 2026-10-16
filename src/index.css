@@ -502,6 +502,15 @@ label {
   font-size: 0.92rem;
 }
 
+.card-art {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  margin-left: auto;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
 .slot {
   display: flex;
   align-items: center;

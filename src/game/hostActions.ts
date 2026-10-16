@@ -71,7 +71,10 @@ export async function removeTeam(code: string, uid: string) {
 
 const songById = (songs: Song[]) => new Map(songs.map((s) => [s.id, s]));
 
-export async function startGame(code: string, game: GameDoc, teams: Team[], songs: Song[]) {
+/** Hämtar albumbilden för ett kort. Ska ge null i stället för att kasta. */
+export type ArtLookup = (song: Song) => Promise<string | null>;
+
+export async function startGame(code: string, game: GameDoc, teams: Team[], songs: Song[], artFor: ArtLookup) {
   const setup = setupGame(
     teams.map((t) => t.uid),
     songs.map((s) => s.id),
@@ -80,13 +83,20 @@ export async function startGame(code: string, game: GameDoc, teams: Team[], song
   const first = drawCard(setup.deck);
   if (!first) throw new Error('För få låtar');
 
+  const startCards = await Promise.all(
+    teams.map(async (team) => {
+      const song = byId.get(setup.startCards[team.uid])!;
+      return toTimelineCard(song, await artFor(song));
+    }),
+  );
+
   const batch = writeBatch(db);
-  for (const team of teams) {
+  teams.forEach((team, i) => {
     batch.update(teamRef(code, team.uid), {
-      timeline: [toTimelineCard(byId.get(setup.startCards[team.uid])!)],
+      timeline: [startCards[i]],
       pendingSlot: null,
     });
-  }
+  });
   const state: PrivateState = {
     deckOrder: first.deck.deckOrder,
     deckIndex: first.deck.deckIndex,
@@ -109,8 +119,9 @@ export async function startGame(code: string, game: GameDoc, teams: Team[], song
   return state.currentCard!;
 }
 
-export async function reveal(code: string, game: GameDoc, team: Team, move: MoveDoc, card: Song) {
-  const evaluation = evaluatePlacement(team.timeline ?? [], move.slotIndex, toTimelineCard(card));
+export async function reveal(code: string, game: GameDoc, team: Team, move: MoveDoc, song: Song, artFor: ArtLookup) {
+  const card = toTimelineCard(song, await artFor(song));
+  const evaluation = evaluatePlacement(team.timeline ?? [], move.slotIndex, card);
   const batch = writeBatch(db);
   if (evaluation.correct) {
     batch.update(teamRef(code, team.uid), { timeline: evaluation.timeline });
@@ -122,7 +133,7 @@ export async function reveal(code: string, game: GameDoc, team: Team, move: Move
       turnIndex: game.turnIndex,
       slotIndex: move.slotIndex,
       correct: evaluation.correct,
-      card: toTimelineCard(card),
+      card,
       reachedTarget: hasReachedTarget(evaluation.timeline, game.settings.targetLength),
     },
   });

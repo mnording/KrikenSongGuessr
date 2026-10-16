@@ -13,6 +13,8 @@ export type TimelineCard = {
   title: string;
   artist: string;
   year: number;
+  /** Albumbild från Spotify. Saknas om spelledaren inte hittade någon. */
+  imageUrl?: string;
 };
 
 export const MIN_TEAMS = 2;
@@ -21,8 +23,11 @@ export const MIN_TARGET = 3;
 export const MAX_TARGET = 15;
 export const DEFAULT_TARGET = 7;
 
-export function toTimelineCard(song: Song): TimelineCard {
-  return { cardId: song.id, title: song.title, artist: song.artist, year: song.year };
+export function toTimelineCard(song: Song, imageUrl?: string | null): TimelineCard {
+  const card: TimelineCard = { cardId: song.id, title: song.title, artist: song.artist, year: song.year };
+  // Firestore tar inte emot undefined, så fältet läggs bara till när det finns.
+  if (imageUrl) card.imageUrl = imageUrl;
+  return card;
 }
 
 /** Fisher–Yates. `random` går att byta ut i tester. */

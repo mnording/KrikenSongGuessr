@@ -20,7 +20,7 @@ import {
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
 import type { GameDoc, MoveDoc, PrivateState, Team, TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
-import { loadSongs, resolveUri } from '../spotify/catalog';
+import { albumArt, loadSongs, resolveUri } from '../spotify/catalog';
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -146,7 +146,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
           playerReady={player.status === 'ready'}
           onStart={() =>
             act(async () => {
-              const card = await startGame(code, game, teams, songs);
+              const card = await startGame(code, game, teams, songs, albumArt);
               await playCard(card, game.turnIndex + 1);
             })
           }
@@ -190,7 +190,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
         onReveal={(team, move) =>
           act(async () => {
             if (!state?.currentCard) throw new Error('Inget aktuellt kort');
-            await reveal(code, game, team, move, state.currentCard);
+            await reveal(code, game, team, move, state.currentCard, albumArt);
           })
         }
         onNext={advance}

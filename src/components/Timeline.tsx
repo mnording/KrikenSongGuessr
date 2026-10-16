@@ -53,6 +53,7 @@ export function Timeline({ cards, color, selectable = false, selectedSlot = null
               <span className="card-title">{card.title}</span>
               <span className="card-artist">{card.artist}</span>
             </span>
+            {card.imageUrl && <img className="card-art" src={card.imageUrl} alt="" loading="lazy" />}
           </li>
         </Fragment>
       ))}

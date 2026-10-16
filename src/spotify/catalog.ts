@@ -4,6 +4,7 @@ import type { Song } from '../engine/game';
 import { spotifyFetch } from './auth';
 
 const CACHE_KEY = 'spotify.uriCache';
+const IMAGE_CACHE_KEY = 'spotify.imageCache';
 
 let songsPromise: Promise<Song[]> | null = null;
 
@@ -13,26 +14,35 @@ export function loadSongs(): Promise<Song[]> {
   return songsPromise;
 }
 
-function readCache(): Record<string, string> {
+function readCache(key = CACHE_KEY): Record<string, string> {
   try {
-    return JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') as Record<string, string>;
+    return JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, string>;
   } catch {
     return {};
   }
 }
 
-function writeCache(id: string, uri: string) {
-  const cache = readCache();
-  cache[id] = uri;
-  localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+function writeCache(id: string, value: string | null, key = CACHE_KEY) {
+  const cache = readCache(key);
+  if (value) cache[id] = value;
+  else delete cache[id];
+  localStorage.setItem(key, JSON.stringify(cache));
 }
+
+type SpotifyImage = { url: string; width: number | null; height: number | null };
 
 type SearchTrack = {
   uri: string;
   name: string;
   artists: { name: string }[];
-  album?: { name: string; release_date?: string };
+  album?: { name: string; release_date?: string; images?: SpotifyImage[] };
 };
+
+/** Spotify listar bilderna störst först (640, 300, 64). 300 px räcker för korten. */
+function pickImage(images: SpotifyImage[] | undefined): string | null {
+  if (!images?.length) return null;
+  return (images.find((i) => (i.width ?? 0) <= 300) ?? images[images.length - 1]).url;
+}
 
 const normalize = (s: string) =>
   s
@@ -78,7 +88,30 @@ export async function resolveUri(song: Song): Promise<string> {
   if (!best) best = pickBest(song, await searchTracks(`${song.title} ${song.artist}`));
   if (!best) throw new Error(`Hittade inte "${song.title}" med ${song.artist} på Spotify`);
   writeCache(song.id, best.uri);
+  writeCache(song.id, pickImage(best.album?.images), IMAGE_CACHE_KEY);
   return best.uri;
+}
+
+/**
+ * Albumbilden för låten, eller null. Kastar aldrig: en saknad bild ska inte stoppa spelet.
+ * Låtar med URI i songs.json eller en äldre cache hämtar bilden från /tracks.
+ */
+export async function albumArt(song: Song): Promise<string | null> {
+  try {
+    const cached = readCache(IMAGE_CACHE_KEY)[song.id];
+    if (cached) return cached;
+    const uri = await resolveUri(song);
+    const resolved = readCache(IMAGE_CACHE_KEY)[song.id];
+    if (resolved) return resolved;
+    const res = await spotifyFetch(`/tracks/${encodeURIComponent(uri.split(':')[2])}`);
+    if (!res.ok) return null;
+    const track = (await res.json()) as SearchTrack;
+    const image = pickImage(track.album?.images);
+    writeCache(song.id, image, IMAGE_CACHE_KEY);
+    return image;
+  } catch {
+    return null;
+  }
 }
 
 export function cachedUri(song: Song): string | null {
@@ -87,6 +120,8 @@ export function cachedUri(song: Song): string | null {
 
 export function overrideUri(songId: string, uri: string) {
   writeCache(songId, uri);
+  // Bilden hör till det gamla spåret. Den hämtas om nästa gång.
+  writeCache(songId, null, IMAGE_CACHE_KEY);
 }
 
 type PlaylistItem = { item?: SearchTrack | null; track?: SearchTrack | null };
