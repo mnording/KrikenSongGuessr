@@ -22,7 +22,7 @@ import type { GameDoc, MoveDoc, PrivateState, Team, TeamDoc } from '../game/type
 import { login } from '../spotify/auth';
 import { loadSongs, resolveUri } from '../spotify/catalog';
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
-import { errorMessage } from '../util';
+import { errorMessage, genitive, textOn } from '../util';
 
 export default function HostGame() {
   const { code = '' } = useParams();
@@ -323,8 +323,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
 
   return (
     <>
-      <div className="turn-banner" style={{ background: team?.color ?? '#334155' }}>
-        {team ? `${team.name}s tur` : 'Laget finns inte längre – hoppa över'}
+      <div className="turn-banner" style={team ? { background: team.color, color: textOn(team.color) } : undefined}>
+        {team ? `${genitive(team.name)} tur` : 'Laget finns inte längre – hoppa över'}
       </div>
 
       <section className="music-panel">

@@ -5,11 +5,11 @@ import { ProfileForm } from '../components/ProfileForm';
 import { Timeline } from '../components/Timeline';
 import { MAX_TEAMS } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
-import { useNow, usePresence, useUser } from '../hooks/misc';
+import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
 import { leaveGame, lockMove, selectSlot, updateProfile } from '../game/teamActions';
 import type { GameDoc, MoveDoc, Team, TeamDoc } from '../game/types';
-import { errorMessage } from '../util';
+import { errorMessage, genitive, textOn } from '../util';
 
 export default function Play() {
   const { code = '' } = useParams();
@@ -127,12 +127,15 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewUid, setViewUid] = useState<string | null>(null);
+  // Skärmen får inte slockna mitt i en tur, då tappar laget anslutningen.
+  useWakeLock(true);
 
-  // Ny tur: glöm den lokala markeringen.
+  // Ny tur: glöm den lokala markeringen och följ laget i tur igen.
   if (slotTurn !== game.turnIndex) {
     setSlotTurn(game.turnIndex);
     setSlot(null);
     setError(null);
+    setViewUid(null);
   }
 
   const current = teams.find((t) => t.uid === game.currentTeamUid);
@@ -171,9 +174,19 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
 
   return (
     <main className="screen">
-      <div className="turn-banner" style={{ background: current?.color ?? '#334155' }}>
-        {myTurn ? 'Er tur!' : current ? `${current.name}s tur` : 'Väntar…'}
-      </div>
+      {result ? (
+        <div className="turn-banner done" style={current ? { borderColor: current.color } : undefined}>
+          Väntar på nästa tur…
+        </div>
+      ) : (
+        <div
+          className={`turn-banner${myTurn ? ' mine' : ''}`}
+          style={current ? { background: current.color, color: textOn(current.color) } : undefined}
+          role="status"
+        >
+          {myTurn ? 'Er tur!' : current ? `${genitive(current.name)} tur` : 'Väntar…'}
+        </div>
+      )}
 
       {result && (
         <div className={`result ${result.correct ? 'correct' : 'wrong'}`} role="status">
@@ -204,13 +217,12 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         <p className="muted">{locked ? `${current?.name ?? 'Laget'} har låst. Väntar på avslöjandet.` : 'Lyssna och gissa med!'}</p>
       )}
 
-      <div className="team-tabs" role="tablist" aria-label="Visa lagets tidslinje">
+      <div className="team-tabs" role="group" aria-label="Visa lagets tidslinje">
         {teams.map((t) => (
           <button
             key={t.uid}
             type="button"
-            role="tab"
-            aria-selected={t.uid === shown.uid}
+            aria-pressed={t.uid === shown.uid}
             className={`tab${t.uid === shown.uid ? ' active' : ''}`}
             style={t.uid === shown.uid ? { borderColor: t.color } : undefined}
             onClick={() => setViewUid(t.uid)}
@@ -238,7 +250,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
             </button>
           ) : (
             <button type="button" className="primary big" disabled={slot === null || busy} onClick={lock}>
-              {slot === null ? 'Välj en lucka' : 'Lås'}
+              {slot === null ? 'Välj en lucka' : busy ? 'Låser…' : 'Lås'}
             </button>
           )}
         </div>
