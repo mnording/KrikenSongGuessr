@@ -1,75 +1,53 @@
-# React + TypeScript + Vite
+# Kriken Låtgissning
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Musikquiz med tidslinje. En spelledare med Spotify Premium spelar musiken från sin telefon, och lagen spelar från sina egna telefoner utan konto.
 
-Currently, two official plugins are available:
+Live: https://krikensongguessr.web.app (Firebase-projekt `krikensongguessr`)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Kom igång
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm install
+npm run dev          # http://127.0.0.1:5173
+npm test             # spelmotorn
+npm run test:rules   # säkerhetsreglerna och ett helt spel mot Firestore-emulatorn (kräver Java)
+npm run deploy       # bygger och deployar hosting och regler
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+`.env.local` behöver `VITE_SPOTIFY_CLIENT_ID`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `https://krikensongguessr.web.app/callback`
+- `http://127.0.0.1:5173/callback` (utveckling)
+- `https://<tunnel>/callback` om du kör via ngrok
 
-```
+## Vyer
+
+| Sökväg | Vem | Vad |
+| --- | --- | --- |
+| `/` | Alla | Skapa spel eller skriv kod |
+| `/host` | Spelledare | Spotify-inloggning, skapa eller fortsätt spel |
+| `/host/:code` | Spelledare | Lobby med QR, turer, musik, avslöja, resultat |
+| `/host/songs` | Spelledare | Koppla låtar till Spotify, provspela, exportera JSON |
+| `/join/:code` | Lag | Lagnamn och färg |
+| `/play/:code` | Lag | Lobby, tidslinje, placera och lås |
+
+## Struktur
+
+- `src/engine/game.ts` – rena funktioner: placeringskontroll, turordning, kortlek, vinst. Testas i `game.test.ts`.
+- `src/game/` – Firestore-modellen. `hostActions.ts` är allt spelledaren skriver, `teamActions.ts` allt ett lag skriver.
+- `src/spotify/` – PKCE med refresh (`auth.ts`), Web Playback SDK-spelaren på modulnivå (`player.ts`), låtlistan (`catalog.ts`).
+- `firestore.rules` – lagen läser aldrig `private/*`, drag bara från laget i tur under `placing`.
+- `tests/` – regeltester och ett helt spel med tre lag mot emulatorn.
+
+## Låtlistan
+
+`src/data/songs.json` har titel, artist och originalår. `spotifyUri` får vara tom: spelledarens telefon söker då fram spåret första gången och sparar svaret lokalt. Öppna `/host/songs`, tryck **Hitta alla på Spotify**, provspela, rätta fel träffar med ✎ och ladda ner en `songs.json` med URI:erna ifyllda.
+
+## Avvikelser från projektbriefen
+
+- `turnIndex` är turens löpnummer och fortsätter räkna mellan omgångar, så att gamla drag aldrig matchar en ny tur. Drag sparas som `moves/{turnIndex}`, ett per tur.
+- **Hoppa över laget** kasserar kortet och drar ett nytt till nästa lag.
+- **Spela igen** återställer samma spel till lobbyn med samma kod och lag.
+- Inget service worker (installerbar via manifestet), så att en ny deploy alltid syns direkt.

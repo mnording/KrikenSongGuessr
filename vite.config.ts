@@ -4,5 +4,6 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-     server: { allowedHosts: ['explicit-amino-phony.ngrok-free.dev'] }  // eller '.ngrok-free.app'
+  // Tunneln under utveckling. Spotify godkänner bara HTTPS eller 127.0.0.1 som redirect.
+  server: { host: '127.0.0.1', allowedHosts: ['.ngrok-free.dev', '.ngrok-free.app'] },
 })
