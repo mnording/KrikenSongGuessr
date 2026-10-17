@@ -1,3 +1,5 @@
+import type { TimelineCard } from './engine/game';
+
 export function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return String(err);
@@ -18,3 +20,14 @@ export function textOn(hex: string): string {
   // Kontrast mot vitt (1.0) jämfört med mot --bg (#0f172a, luminans ~0.009).
   return 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.059 ? '#fff' : '#0f172a';
 }
+
+/** Beskrivning av en lucka i tidslinjen, till exempel "Mellan 1966 och 1977". */
+export function slotLabel(cards: TimelineCard[], index: number): string {
+  const left = cards[index - 1];
+  const right = cards[index];
+  if (!left && !right) return 'Första kortet';
+  if (!left) return `Före ${right.year}`;
+  if (!right) return `Efter ${left.year}`;
+  return `Mellan ${left.year} och ${right.year}`;
+}
+

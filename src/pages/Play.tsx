@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import '../play.css';
 import { Link, Navigate, useParams } from 'react-router';
-import { ErrorText, Loading, Scoreboard, Screen, TeamDot, TeamName } from '../components/Common';
+import { ErrorText, Loading, Screen } from '../components/Common';
 import { ProfileForm } from '../components/ProfileForm';
-import { Timeline } from '../components/Timeline';
+import { TicketTimeline } from '../components/TicketTimeline';
 import { MAX_TEAMS } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
 import { leaveGame, lockMove, selectSlot, updateProfile } from '../game/teamActions';
-import type { GameDoc, MoveDoc, Team, TeamDoc } from '../game/types';
+import { isOnline, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
 import { errorMessage, genitive, textOn } from '../util';
 
 export default function Play() {
@@ -44,16 +45,100 @@ export default function Play() {
 
   if (game.data.status === 'lobby') return <Lobby code={code} me={me} teams={sortedTeams} />;
   if (game.data.status === 'finished') {
+    const winners = sortedTeams.filter((t) => game.data!.winnerUids.includes(t.uid));
+    const bandTeam = winners.find((t) => t.uid === me.uid) ?? winners[0];
+    const byScore = [...sortedTeams].sort((a, b) => (b.timeline?.length ?? 0) - (a.timeline?.length ?? 0));
     return (
-      <Screen title={winnerTitle(game.data, teams.data, me.uid)}>
-        <Scoreboard teams={teams.data} target={game.data.settings.targetLength} winnerUids={game.data.winnerUids} />
-        <p className="muted">Spelledaren kan starta en ny omgång.</p>
+      <FestPage>
+        <Wristband color={bandTeam?.color} mine={bandTeam?.uid === me.uid} big={winnerTitle(game.data, teams.data, me.uid)} sub="Spelet är slut" />
+        <Bands teams={byScore} winnerUids={game.data.winnerUids} />
+        <p className="hint">Spelledaren kan starta en ny omgång.</p>
         <h2>Er tidslinje</h2>
-        <Timeline cards={me.timeline ?? []} color={me.color} />
-      </Screen>
+        <TicketTimeline cards={me.timeline ?? []} />
+      </FestPage>
     );
   }
-  return <InGame code={code} game={game.data} me={me} teams={teams.data} />;
+  return <InGame code={code} game={game.data} me={me} teams={sortedTeams} />;
+}
+
+/** Lagens skärm har en egen värld; värdvyn behåller sitt utseende. */
+function FestPage({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const before = meta?.getAttribute('content');
+    meta?.setAttribute('content', '#17122e');
+    return () => {
+      if (before) meta?.setAttribute('content', before);
+    };
+  }, []);
+  return (
+    <div className="fest">
+      <main className="screen">{children}</main>
+    </div>
+  );
+}
+
+/** Armbandet överst: vems skärm det är just nu. Spelas in på nytt när innehållet byts. */
+function Wristband({ color, big, sub, mine = false }: { color?: string; big: ReactNode; sub?: ReactNode; mine?: boolean }) {
+  return (
+    <header
+      key={`${color}-${typeof big === 'string' ? big : ''}`}
+      className={`wristband${mine ? ' mine' : ''}`}
+      style={color ? { backgroundColor: color, color: textOn(color) } : undefined}
+      role="status"
+    >
+      <h1 className="wristband-big">{big}</h1>
+      {sub && <div className="wristband-sub">{sub}</div>}
+    </header>
+  );
+}
+
+type BandsProps = {
+  teams: Team[];
+  now?: number;
+  showCount?: boolean;
+  shownUid?: string;
+  onShow?: (uid: string) => void;
+  winnerUids?: string[];
+};
+
+/** Alla lag som armband i ett rutnät, så att ingen behöver skrolla i sidled. */
+function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = [] }: BandsProps) {
+  return (
+    <ul className={`bands${teams.length <= 8 ? ' few' : ''}`} aria-label={onShow ? 'Visa lagets tidslinje' : 'Lag'}>
+      {teams.map((t) => {
+        const offline = now !== undefined && !isOnline(t, now);
+        const className = `band${t.uid === shownUid ? ' shown' : ''}${offline ? ' offline' : ''}${winnerUids.includes(t.uid) ? ' winner' : ''}`;
+        const style = { backgroundColor: t.color, color: textOn(t.color) };
+        const content = (
+          <>
+            <span className="band-name">
+              {t.name}
+              {offline && <span className="band-off">offline</span>}
+            </span>
+            {showCount && (
+              <span className="band-count" aria-label={`${t.timeline?.length ?? 0} kort`}>
+                {t.timeline?.length ?? 0}
+              </span>
+            )}
+          </>
+        );
+        return (
+          <li key={t.uid}>
+            {onShow ? (
+              <button type="button" className={className} style={style} aria-pressed={t.uid === shownUid} onClick={() => onShow(t.uid)}>
+                {content}
+              </button>
+            ) : (
+              <div className={className} style={style} title={offline ? 'offline' : undefined}>
+                {content}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function winnerTitle(game: GameDoc, teams: Team[], myUid: string): string {
@@ -84,14 +169,20 @@ function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
   }
 
   return (
-    <Screen title="Ni är med!">
-      <div className="me-banner" style={{ borderColor: me.color }}>
-        <TeamDot color={me.color} />
-        <strong>{me.name}</strong>
-        <button type="button" className="link" onClick={() => setEditing((v) => !v)}>
-          {editing ? 'Stäng' : 'Ändra'}
-        </button>
-      </div>
+    <FestPage>
+      <Wristband
+        color={me.color}
+        mine
+        big="Ni är med!"
+        sub={
+          <>
+            {me.name}
+            <button type="button" className="link" onClick={() => setEditing((v) => !v)}>
+              {editing ? 'Stäng' : 'Ändra'}
+            </button>
+          </>
+        }
+      />
       {editing && (
         <ProfileForm
           initialName={me.name}
@@ -106,16 +197,10 @@ function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
         />
       )}
       <ErrorText error={error} />
-      <p className="muted">Väntar på att spelledaren startar spelet…</p>
+      <p className="hint">Väntar på att spelledaren startar spelet…</p>
       <h2>Lag ({teams.length})</h2>
-      <ul className="team-list">
-        {teams.map((t) => (
-          <li key={t.uid}>
-            <TeamName team={t} now={now} />
-          </li>
-        ))}
-      </ul>
-    </Screen>
+      <Bands teams={teams} now={now} showCount={false} shownUid={me.uid} />
+    </FestPage>
   );
 }
 
@@ -172,72 +257,66 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         ? (move.data?.slotIndex ?? shown.pendingSlot ?? null)
         : null;
 
+  const resultTeam = result ? teams.find((t) => t.uid === result.teamUid) : undefined;
+  const resultMine = result?.teamUid === me.uid;
+  const lockedText = 'Låst här';
+
   return (
-    <main className="screen">
+    <FestPage>
       {result ? (
-        <div className="turn-banner done" style={current ? { borderColor: current.color } : undefined}>
-          Väntar på nästa tur…
-        </div>
+        <Wristband
+          color={resultTeam?.color}
+          mine={resultMine}
+          big={result.correct ? 'Rätt!' : 'Fel!'}
+          sub={`${resultMine ? 'Ni' : (resultTeam?.name ?? 'Laget')} ${result.correct ? 'fick kortet' : 'missade'}`}
+        />
+      ) : myTurn ? (
+        <Wristband color={me.color} mine big="Er tur!" sub={me.name} />
       ) : (
-        <div
-          className={`turn-banner${myTurn ? ' mine' : ''}`}
-          style={current ? { background: current.color, color: textOn(current.color) } : undefined}
-          role="status"
-        >
-          {myTurn ? 'Er tur!' : current ? `${genitive(current.name)} tur` : 'Väntar…'}
-        </div>
+        <Wristband color={current?.color} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
       )}
 
-      {result && (
-        <div className={`result ${result.correct ? 'correct' : 'wrong'}`} role="status">
-          <strong>{result.correct ? 'Rätt!' : 'Fel!'}</strong>{' '}
-          {result.teamUid === me.uid ? 'Ni' : teams.find((t) => t.uid === result.teamUid)?.name}{' '}
-          {result.correct ? 'fick kortet.' : 'missade.'}
-          <div className="reveal-card">
-            <span className="card-year">{result.card.year}</span>
-            <span>
-              <span className="card-title">{result.card.title}</span>
-              <span className="card-artist">{result.card.artist}</span>
+      <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} />
+
+      {result && !(result.correct && result.teamUid === shown.uid) && (
+        <div className="reveal">
+          <div className={`stub${result.correct ? ' won' : ' missed'}`}>
+            <span className="stub-year">{result.card.year}</span>
+            <span className="stub-text">
+              <span className="stub-title">{result.card.title}</span>
+              <span className="stub-artist">{result.card.artist}</span>
             </span>
+            {result.card.imageUrl && <img className="stub-art" src={result.card.imageUrl} alt="" />}
           </div>
-          {result.reachedTarget && <p><strong>Det är klart – {game.settings.targetLength} kort!</strong></p>}
         </div>
       )}
 
-      {myTurn && game.phase === 'placing' && (
-        <div className="instructions">
-          {locked ? (
-            <p>Låst! Väntar på att spelledaren avslöjar.</p>
+      {result?.reachedTarget && <p className="verdict">Det är klart – {game.settings.targetLength} kort!</p>}
+
+      <p className="hint">
+        {result ? (
+          'Väntar på nästa tur…'
+        ) : myTurn && game.phase === 'placing' ? (
+          locked ? (
+            'Låst! Väntar på att spelledaren avslöjar.'
           ) : (
-            <p>Lyssna och tryck på luckan där låten passar. Tryck sedan Lås.</p>
-          )}
-        </div>
-      )}
-      {!myTurn && game.phase === 'placing' && (
-        <p className="muted">{locked ? `${current?.name ?? 'Laget'} har låst. Väntar på avslöjandet.` : 'Lyssna och gissa med!'}</p>
-      )}
+            <>
+              Lyssna och tryck på luckan där låten passar. <strong>Tryck sedan Lås.</strong>
+            </>
+          )
+        ) : game.phase === 'placing' ? (
+          locked ? `${current?.name ?? 'Laget'} har låst. Väntar på avslöjandet.` : 'Lyssna och gissa med!'
+        ) : null}
+      </p>
 
-      <div className="team-tabs" role="group" aria-label="Visa lagets tidslinje">
-        {teams.map((t) => (
-          <button
-            key={t.uid}
-            type="button"
-            aria-pressed={t.uid === shown.uid}
-            className={`tab${t.uid === shown.uid ? ' active' : ''}`}
-            style={t.uid === shown.uid ? { borderColor: t.color } : undefined}
-            onClick={() => setViewUid(t.uid)}
-          >
-            <TeamName team={t} now={now} /> <span className="score">{t.timeline?.length ?? 0}</span>
-          </button>
-        ))}
-      </div>
+      {shown.uid !== me.uid && shown.uid !== game.currentTeamUid && <h2>{genitive(shown.name)} tidslinje</h2>}
 
-      <Timeline
+      <TicketTimeline
         cards={shown.timeline ?? []}
-        color={shown.color}
         selectable={canPlace && shown.uid === me.uid}
         selectedSlot={shownSlot}
         onSelect={choose}
+        pendingText={locked ? lockedText : 'De funderar här…'}
         highlightCardId={result?.correct && result.teamUid === shown.uid ? result.card.cardId : null}
       />
 
@@ -245,19 +324,19 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       {canPlace && (
         <div className="sticky-actions">
           {shown.uid !== me.uid ? (
-            <button type="button" className="primary" onClick={() => setViewUid(me.uid)}>
+            <button type="button" className="lock" onClick={() => setViewUid(me.uid)}>
               Visa vår tidslinje
             </button>
           ) : (
-            <button type="button" className="primary big" disabled={slot === null || busy} onClick={lock}>
+            <button type="button" className="lock" disabled={slot === null || busy} onClick={lock}>
               {slot === null ? 'Välj en lucka' : busy ? 'Låser…' : 'Lås'}
             </button>
           )}
         </div>
       )}
-      <p className="muted small">
+      <p className="fest-foot">
         Först till {game.settings.targetLength} kort vinner · {game.cardsLeft} kort kvar i leken
       </p>
-    </main>
+    </FestPage>
   );
 }

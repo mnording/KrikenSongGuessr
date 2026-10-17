@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import type { TimelineCard } from '../engine/game';
+import { slotLabel } from '../util';
 
 type Props = {
   cards: TimelineCard[];
@@ -61,13 +62,3 @@ export function Timeline({ cards, color, selectable = false, selectedSlot = null
     </ol>
   );
 }
-
-function slotLabel(cards: TimelineCard[], index: number): string {
-  const left = cards[index - 1];
-  const right = cards[index];
-  if (!left && !right) return 'Första kortet';
-  if (!left) return `Före ${right.year}`;
-  if (!right) return `Efter ${left.year}`;
-  return `Mellan ${left.year} och ${right.year}`;
-}
-

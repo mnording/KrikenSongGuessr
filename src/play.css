@@ -1,0 +1,467 @@
+@import '@fontsource/archivo/latin-400';
+@import '@fontsource/archivo/latin-700';
+@import '@fontsource/big-shoulders-display/latin-800';
+@import '@fontsource/big-shoulders-display/latin-900';
+
+/* Lagens skärm: festivalbiljetter och armband. Gäller bara under .fest, värdvyn är orörd. */
+
+.fest {
+  --night: #17122e;
+  --night-2: #221a42;
+  --night-3: #2e2556;
+  --paper: #f4f5f8;
+  --ink: #17122e;
+  --ink-soft: #565072;
+  --perf: rgb(241 238 251 / 0.3);
+  --fest-text: #f1eefb;
+  --fest-muted: #b9b3d6;
+  --act: #d7ff3d;
+  --act-soft: rgb(215 255 61 / 0.1);
+  --miss: #ff6b5e;
+  --display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  min-height: 100dvh;
+  background: var(--night);
+  color: var(--fest-text);
+  font-family: Archivo, system-ui, sans-serif;
+}
+
+.fest ::selection {
+  background: var(--act);
+  color: var(--ink);
+}
+
+.fest .screen {
+  padding-top: 0;
+}
+
+.fest :is(button, .button, input):focus-visible {
+  outline: 3px solid var(--act);
+  outline-offset: 2px;
+}
+
+.fest .muted {
+  color: var(--fest-muted);
+}
+
+.fest .error {
+  color: var(--miss);
+}
+
+/* ── Armbandet: den som har skärmen just nu ── */
+
+.wristband {
+  position: relative;
+  margin: 0 -16px;
+  padding: calc(28px + env(safe-area-inset-top)) 72px 18px 20px;
+  background-color: var(--night-3);
+  overflow-wrap: anywhere;
+  animation: band-in 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tryckknappen som håller ihop bandet. */
+.wristband::after {
+  content: '';
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 6px rgb(23 18 46 / 0.12);
+}
+
+.wristband-big {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 2.6rem;
+  font-weight: 900;
+  line-height: 0.9;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.wristband.mine .wristband-big {
+  font-size: clamp(3.4rem, 17vw, 4.4rem);
+  line-height: 0.85;
+}
+
+.wristband-sub {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+
+.wristband-sub .link {
+  min-height: 32px;
+  padding: 0 0 0 0.6rem;
+  color: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+@keyframes band-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ── Alla lagens armband, alltid synliga ── */
+
+.bands {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bands li {
+  display: contents;
+}
+
+.bands.few {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 4px 0 10px;
+  border: none;
+  border-radius: 22px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: left;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+/* Två rader hellre än avklippta lagnamn. */
+.band-name {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.band-count {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 5px;
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.band.shown {
+  outline-color: var(--fest-text);
+}
+
+/* Offline: namnet ska fortfarande gå att läsa, bara räknaren bleknar. */
+.band.offline .band-count {
+  opacity: 0.55;
+}
+
+.band-off {
+  display: table;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.band.winner .band-count {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ── Rad med instruktion ── */
+
+.hint {
+  margin: 14px 4px 10px;
+  color: var(--fest-muted);
+  font-size: 0.95rem;
+}
+
+.hint strong {
+  color: var(--fest-text);
+}
+
+.fest h2 {
+  margin: 20px 4px 8px;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* ── Biljettremsan ── */
+
+.tickets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stub {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  /* Halvcirkelhacken i kanterna, som på en riven biljett. */
+  -webkit-mask:
+    radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+}
+
+.stub-year {
+  flex: none;
+  width: 3.1ch;
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stub-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-left: 14px;
+  border-left: 2px dashed #c9cbd6;
+}
+
+.stub-title {
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.stub-artist {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.stub-art {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+/* Kortet som just vanns lyser tills nästa tur. */
+.stub.won {
+  background: var(--act);
+}
+
+.stub.won .stub-text {
+  border-left-color: rgb(23 18 46 / 0.3);
+}
+
+.stub.won .stub-artist {
+  color: var(--ink);
+}
+
+/* Den öppnade luckan: en tom biljett som väntar på låten. */
+.stub.open {
+  min-height: 72px;
+  margin: 4px 0;
+  border: 3px dashed var(--act);
+  background: var(--act-soft);
+  color: var(--act);
+  -webkit-mask: none;
+  mask: none;
+  animation: tear-open 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stub.open .stub-text {
+  border-left-color: rgb(215 255 61 / 0.4);
+  font-weight: 700;
+}
+
+.stub.open.theirs {
+  border-color: #9a93bf;
+  background: transparent;
+  color: var(--fest-muted);
+}
+
+.stub.open.theirs .stub-text {
+  border-left-color: rgb(154 147 191 / 0.4);
+}
+
+@keyframes tear-open {
+  from {
+    min-height: 0;
+    opacity: 0;
+    transform: scaleY(0.4);
+  }
+}
+
+/* Perforeringen mellan två stubbar. */
+.perf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 14px;
+  padding: 0 10px;
+}
+
+.perf::before,
+.perf::after {
+  content: '';
+  flex: 1;
+  border-top: 2px dashed var(--perf);
+}
+
+.perf-button {
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+}
+
+.perf-plus {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 2px solid rgb(241 238 251 / 0.55);
+  border-radius: 50%;
+}
+
+.perf-plus::before,
+.perf-plus::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--fest-text);
+}
+
+.perf-plus::after {
+  transform: rotate(90deg);
+}
+
+@media (hover: hover) {
+  .perf-button:hover .perf-plus {
+    border-color: var(--act);
+  }
+}
+
+/* ── Avslöjandet ── */
+
+.verdict {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reveal {
+  margin-top: 12px;
+}
+
+.reveal .stub.missed .stub-year {
+  color: #b42318;
+}
+
+/* ── Dockan längst ner ── */
+
+.fest .sticky-actions {
+  background: linear-gradient(transparent, var(--night) 32%);
+}
+
+.fest .lock {
+  min-height: 64px;
+  border: none;
+  border-radius: 10px;
+  background: var(--act);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fest .lock:disabled {
+  opacity: 1;
+  border: 2px dashed var(--perf);
+  background: var(--night-2);
+  color: var(--fest-muted);
+  font-size: 1.5rem;
+}
+
+.fest-foot {
+  margin: 18px 4px 0;
+  color: var(--fest-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.fest .card-box {
+  background: var(--night-2);
+}
+
+.fest input {
+  background: var(--night);
+  border-color: var(--night-3);
+}
+
+.fest .link {
+  color: inherit;
+}
