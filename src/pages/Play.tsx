@@ -105,7 +105,7 @@ type BandsProps = {
 /** Alla lag som armband i ett rutnät, så att ingen behöver skrolla i sidled. */
 function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = [] }: BandsProps) {
   return (
-    <ul className={`bands${teams.length <= 6 ? ' few' : ''}`} aria-label={onShow ? 'Visa lagets tidslinje' : 'Lag'}>
+    <ul className={`bands${teams.length <= 8 ? ' few' : ''}`} aria-label={onShow ? 'Visa lagets tidslinje' : 'Lag'}>
       {teams.map((t) => {
         const offline = now !== undefined && !isOnline(t, now);
         const className = `band${t.uid === shownUid ? ' shown' : ''}${offline ? ' offline' : ''}${winnerUids.includes(t.uid) ? ' winner' : ''}`;
@@ -114,7 +114,7 @@ function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = []
           <>
             <span className="band-name">
               {t.name}
-              {offline && <span className="visually-hidden"> (offline)</span>}
+              {offline && <span className="band-off">offline</span>}
             </span>
             {showCount && (
               <span className="band-count" aria-label={`${t.timeline?.length ?? 0} kort`}>
@@ -273,7 +273,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       ) : myTurn ? (
         <Wristband color={me.color} mine big="Er tur!" sub={me.name} />
       ) : (
-        <Wristband color={current?.color} big={current ? current.name : 'Väntar…'} sub={current ? 'spelar nu' : undefined} />
+        <Wristband color={current?.color} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
       )}
 
       <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} />
