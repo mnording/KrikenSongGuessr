@@ -1,0 +1,668 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-17T04:16:20+00:00",
+  "title": "Design System: Kriken Låtgissning",
+  "extensions": {
+    "colorMeta": {
+      "night": {
+        "role": "neutral",
+        "displayName": "Night Field Indigo",
+        "canonical": "oklch(20.6% 0.054 289)",
+        "tonalRamp": [
+          "oklch(15% 0.054 289)",
+          "oklch(25% 0.054 289)",
+          "oklch(35% 0.054 289)",
+          "oklch(48% 0.054 289)",
+          "oklch(60% 0.054 289)",
+          "oklch(72% 0.054 289)",
+          "oklch(84% 0.054 289)",
+          "oklch(95% 0.054 289)"
+        ]
+      },
+      "night-raised": {
+        "role": "neutral",
+        "displayName": "Night Raised",
+        "canonical": "oklch(25.2% 0.073 289)",
+        "tonalRamp": [
+          "oklch(15% 0.073 289)",
+          "oklch(25% 0.073 289)",
+          "oklch(35% 0.073 289)",
+          "oklch(48% 0.073 289)",
+          "oklch(60% 0.073 289)",
+          "oklch(72% 0.073 289)",
+          "oklch(84% 0.073 289)",
+          "oklch(95% 0.073 289)"
+        ]
+      },
+      "night-band": {
+        "role": "neutral",
+        "displayName": "Night Band",
+        "canonical": "oklch(30.3% 0.085 289)",
+        "tonalRamp": [
+          "oklch(15% 0.085 289)",
+          "oklch(25% 0.085 289)",
+          "oklch(35% 0.085 289)",
+          "oklch(48% 0.085 289)",
+          "oklch(60% 0.085 289)",
+          "oklch(72% 0.085 289)",
+          "oklch(84% 0.085 289)",
+          "oklch(95% 0.085 289)"
+        ]
+      },
+      "ticket-paper": {
+        "role": "neutral",
+        "displayName": "Thermal Ticket Paper",
+        "canonical": "oklch(97% 0.004 271)",
+        "tonalRamp": [
+          "oklch(15% 0.004 271)",
+          "oklch(25% 0.004 271)",
+          "oklch(35% 0.004 271)",
+          "oklch(48% 0.004 271)",
+          "oklch(60% 0.004 271)",
+          "oklch(72% 0.004 271)",
+          "oklch(84% 0.004 271)",
+          "oklch(95% 0.004 271)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink Indigo",
+        "canonical": "oklch(20.6% 0.054 289)",
+        "tonalRamp": [
+          "oklch(15% 0.054 289)",
+          "oklch(25% 0.054 289)",
+          "oklch(35% 0.054 289)",
+          "oklch(48% 0.054 289)",
+          "oklch(60% 0.054 289)",
+          "oklch(72% 0.054 289)",
+          "oklch(84% 0.054 289)",
+          "oklch(95% 0.054 289)"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "oklch(45.1% 0.055 292)",
+        "tonalRamp": [
+          "oklch(15% 0.055 292)",
+          "oklch(25% 0.055 292)",
+          "oklch(35% 0.055 292)",
+          "oklch(48% 0.055 292)",
+          "oklch(60% 0.055 292)",
+          "oklch(72% 0.055 292)",
+          "oklch(84% 0.055 292)",
+          "oklch(95% 0.055 292)"
+        ]
+      },
+      "stub-rule": {
+        "role": "neutral",
+        "displayName": "Stub Tear Line",
+        "canonical": "#c9cbd6",
+        "tonalRamp": [
+          "oklch(15% 0.012 275)",
+          "oklch(25% 0.012 275)",
+          "oklch(35% 0.012 275)",
+          "oklch(48% 0.012 275)",
+          "oklch(60% 0.012 275)",
+          "oklch(72% 0.012 275)",
+          "oklch(84% 0.012 275)",
+          "oklch(95% 0.012 275)"
+        ]
+      },
+      "perforation": {
+        "role": "neutral",
+        "displayName": "Perforation",
+        "canonical": "rgb(241 238 251 / 0.3)",
+        "tonalRamp": [
+          "oklch(15% 0.018 297)",
+          "oklch(25% 0.018 297)",
+          "oklch(35% 0.018 297)",
+          "oklch(48% 0.018 297)",
+          "oklch(60% 0.018 297)",
+          "oklch(72% 0.018 297)",
+          "oklch(84% 0.018 297)",
+          "oklch(95% 0.018 297)"
+        ]
+      },
+      "night-text": {
+        "role": "neutral",
+        "displayName": "Night Text",
+        "canonical": "oklch(95.5% 0.018 297)",
+        "tonalRamp": [
+          "oklch(15% 0.018 297)",
+          "oklch(25% 0.018 297)",
+          "oklch(35% 0.018 297)",
+          "oklch(48% 0.018 297)",
+          "oklch(60% 0.018 297)",
+          "oklch(72% 0.018 297)",
+          "oklch(84% 0.018 297)",
+          "oklch(95% 0.018 297)"
+        ]
+      },
+      "night-muted": {
+        "role": "neutral",
+        "displayName": "Night Muted Lilac",
+        "canonical": "oklch(78.3% 0.05 293)",
+        "tonalRamp": [
+          "oklch(15% 0.05 293)",
+          "oklch(25% 0.05 293)",
+          "oklch(35% 0.05 293)",
+          "oklch(48% 0.05 293)",
+          "oklch(60% 0.05 293)",
+          "oklch(72% 0.05 293)",
+          "oklch(84% 0.05 293)",
+          "oklch(95% 0.05 293)"
+        ]
+      },
+      "theirs-outline": {
+        "role": "neutral",
+        "displayName": "Theirs Outline",
+        "canonical": "#9a93bf",
+        "tonalRamp": [
+          "oklch(15% 0.06 290)",
+          "oklch(25% 0.06 290)",
+          "oklch(35% 0.06 290)",
+          "oklch(48% 0.06 290)",
+          "oklch(60% 0.06 290)",
+          "oklch(72% 0.06 290)",
+          "oklch(84% 0.06 290)",
+          "oklch(95% 0.06 290)"
+        ]
+      },
+      "acid-lime": {
+        "role": "primary",
+        "displayName": "Acid Lime",
+        "canonical": "oklch(94% 0.209 121)",
+        "tonalRamp": [
+          "oklch(15% 0.2 121)",
+          "oklch(25% 0.2 121)",
+          "oklch(35% 0.2 121)",
+          "oklch(48% 0.2 121)",
+          "oklch(60% 0.2 121)",
+          "oklch(72% 0.2 121)",
+          "oklch(84% 0.2 121)",
+          "oklch(95% 0.2 121)"
+        ]
+      },
+      "acid-lime-wash": {
+        "role": "primary",
+        "displayName": "Acid Lime Wash",
+        "canonical": "rgb(215 255 61 / 0.1)",
+        "tonalRamp": [
+          "oklch(15% 0.2 121)",
+          "oklch(25% 0.2 121)",
+          "oklch(35% 0.2 121)",
+          "oklch(48% 0.2 121)",
+          "oklch(60% 0.2 121)",
+          "oklch(72% 0.2 121)",
+          "oklch(84% 0.2 121)",
+          "oklch(95% 0.2 121)"
+        ]
+      },
+      "miss-coral": {
+        "role": "tertiary",
+        "displayName": "Miss Coral",
+        "canonical": "oklch(70.9% 0.183 28)",
+        "tonalRamp": [
+          "oklch(15% 0.183 28)",
+          "oklch(25% 0.183 28)",
+          "oklch(35% 0.183 28)",
+          "oklch(48% 0.183 28)",
+          "oklch(60% 0.183 28)",
+          "oklch(72% 0.183 28)",
+          "oklch(84% 0.183 28)",
+          "oklch(95% 0.183 28)"
+        ]
+      },
+      "miss-print": {
+        "role": "tertiary",
+        "displayName": "Miss Print",
+        "canonical": "#b42318",
+        "tonalRamp": [
+          "oklch(15% 0.18 28)",
+          "oklch(25% 0.18 28)",
+          "oklch(35% 0.18 28)",
+          "oklch(48% 0.18 28)",
+          "oklch(60% 0.18 28)",
+          "oklch(72% 0.18 28)",
+          "oklch(84% 0.18 28)",
+          "oklch(95% 0.18 28)"
+        ]
+      },
+      "host-slate": {
+        "role": "neutral",
+        "displayName": "Host Slate (incumbent)",
+        "canonical": "oklch(20.8% 0.04 266)",
+        "tonalRamp": [
+          "oklch(15% 0.04 266)",
+          "oklch(25% 0.04 266)",
+          "oklch(35% 0.04 266)",
+          "oklch(48% 0.04 266)",
+          "oklch(60% 0.04 266)",
+          "oklch(72% 0.04 266)",
+          "oklch(84% 0.04 266)",
+          "oklch(95% 0.04 266)"
+        ]
+      },
+      "host-surface": {
+        "role": "neutral",
+        "displayName": "Host Surface (incumbent)",
+        "canonical": "oklch(27.9% 0.037 260)",
+        "tonalRamp": [
+          "oklch(15% 0.037 260)",
+          "oklch(25% 0.037 260)",
+          "oklch(35% 0.037 260)",
+          "oklch(48% 0.037 260)",
+          "oklch(60% 0.037 260)",
+          "oklch(72% 0.037 260)",
+          "oklch(84% 0.037 260)",
+          "oklch(95% 0.037 260)"
+        ]
+      },
+      "host-surface-raised": {
+        "role": "neutral",
+        "displayName": "Host Surface Raised (incumbent)",
+        "canonical": "oklch(32.3% 0.042 260)",
+        "tonalRamp": [
+          "oklch(15% 0.042 260)",
+          "oklch(25% 0.042 260)",
+          "oklch(35% 0.042 260)",
+          "oklch(48% 0.042 260)",
+          "oklch(60% 0.042 260)",
+          "oklch(72% 0.042 260)",
+          "oklch(84% 0.042 260)",
+          "oklch(95% 0.042 260)"
+        ]
+      },
+      "host-border": {
+        "role": "neutral",
+        "displayName": "Host Border (incumbent)",
+        "canonical": "oklch(37.2% 0.039 257)",
+        "tonalRamp": [
+          "oklch(15% 0.039 257)",
+          "oklch(25% 0.039 257)",
+          "oklch(35% 0.039 257)",
+          "oklch(48% 0.039 257)",
+          "oklch(60% 0.039 257)",
+          "oklch(72% 0.039 257)",
+          "oklch(84% 0.039 257)",
+          "oklch(95% 0.039 257)"
+        ]
+      },
+      "host-text": {
+        "role": "neutral",
+        "displayName": "Host Text (incumbent)",
+        "canonical": "oklch(98.4% 0.003 248)",
+        "tonalRamp": [
+          "oklch(15% 0.003 248)",
+          "oklch(25% 0.003 248)",
+          "oklch(35% 0.003 248)",
+          "oklch(48% 0.003 248)",
+          "oklch(60% 0.003 248)",
+          "oklch(72% 0.003 248)",
+          "oklch(84% 0.003 248)",
+          "oklch(95% 0.003 248)"
+        ]
+      },
+      "host-muted": {
+        "role": "neutral",
+        "displayName": "Host Muted (incumbent)",
+        "canonical": "oklch(71.1% 0.035 257)",
+        "tonalRamp": [
+          "oklch(15% 0.035 257)",
+          "oklch(25% 0.035 257)",
+          "oklch(35% 0.035 257)",
+          "oklch(48% 0.035 257)",
+          "oklch(60% 0.035 257)",
+          "oklch(72% 0.035 257)",
+          "oklch(84% 0.035 257)",
+          "oklch(95% 0.035 257)"
+        ]
+      },
+      "host-green": {
+        "role": "secondary",
+        "displayName": "Host Green (incumbent primary)",
+        "canonical": "oklch(72.3% 0.192 150)",
+        "tonalRamp": [
+          "oklch(15% 0.192 150)",
+          "oklch(25% 0.192 150)",
+          "oklch(35% 0.192 150)",
+          "oklch(48% 0.192 150)",
+          "oklch(60% 0.192 150)",
+          "oklch(72% 0.192 150)",
+          "oklch(84% 0.192 150)",
+          "oklch(95% 0.192 150)"
+        ]
+      },
+      "host-green-ink": {
+        "role": "secondary",
+        "displayName": "Host Green Ink (incumbent)",
+        "canonical": "#052e16",
+        "tonalRamp": [
+          "oklch(15% 0.06 150)",
+          "oklch(25% 0.06 150)",
+          "oklch(35% 0.06 150)",
+          "oklch(48% 0.06 150)",
+          "oklch(60% 0.06 150)",
+          "oklch(72% 0.06 150)",
+          "oklch(84% 0.06 150)",
+          "oklch(95% 0.06 150)"
+        ]
+      },
+      "host-danger": {
+        "role": "tertiary",
+        "displayName": "Host Danger (incumbent)",
+        "canonical": "oklch(71.1% 0.166 22)",
+        "tonalRamp": [
+          "oklch(15% 0.166 22)",
+          "oklch(25% 0.166 22)",
+          "oklch(35% 0.166 22)",
+          "oklch(48% 0.166 22)",
+          "oklch(60% 0.166 22)",
+          "oklch(72% 0.166 22)",
+          "oklch(84% 0.166 22)",
+          "oklch(95% 0.166 22)"
+        ]
+      },
+      "host-correct": {
+        "role": "tertiary",
+        "displayName": "Host Correct (incumbent)",
+        "canonical": "#15803d",
+        "tonalRamp": [
+          "oklch(15% 0.15 150)",
+          "oklch(25% 0.15 150)",
+          "oklch(35% 0.15 150)",
+          "oklch(48% 0.15 150)",
+          "oklch(60% 0.15 150)",
+          "oklch(72% 0.15 150)",
+          "oklch(84% 0.15 150)",
+          "oklch(95% 0.15 150)"
+        ]
+      },
+      "host-wrong": {
+        "role": "tertiary",
+        "displayName": "Host Wrong (incumbent)",
+        "canonical": "#dc2626",
+        "tonalRamp": [
+          "oklch(15% 0.2 27)",
+          "oklch(25% 0.2 27)",
+          "oklch(35% 0.2 27)",
+          "oklch(48% 0.2 27)",
+          "oklch(60% 0.2 27)",
+          "oklch(72% 0.2 27)",
+          "oklch(84% 0.2 27)",
+          "oklch(95% 0.2 27)"
+        ]
+      },
+      "host-link": {
+        "role": "neutral",
+        "displayName": "Host Link (incumbent)",
+        "canonical": "#93c5fd",
+        "tonalRamp": [
+          "oklch(15% 0.1 254)",
+          "oklch(25% 0.1 254)",
+          "oklch(35% 0.1 254)",
+          "oklch(48% 0.1 254)",
+          "oklch(60% 0.1 254)",
+          "oklch(72% 0.1 254)",
+          "oklch(84% 0.1 254)",
+          "oklch(95% 0.1 254)"
+        ]
+      },
+      "host-focus": {
+        "role": "neutral",
+        "displayName": "Host Focus (incumbent)",
+        "canonical": "#60a5fa",
+        "tonalRamp": [
+          "oklch(15% 0.14 254)",
+          "oklch(25% 0.14 254)",
+          "oklch(35% 0.14 254)",
+          "oklch(48% 0.14 254)",
+          "oklch(60% 0.14 254)",
+          "oklch(72% 0.14 254)",
+          "oklch(84% 0.14 254)",
+          "oklch(95% 0.14 254)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Wristband headline when the screen is about us (Er tur!, Ni är med!). Player world."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Wristband headline about another team (<Lags> tur, <Lag> vann). Player world."
+      },
+      "stub-year": {
+        "displayName": "Stub Year",
+        "purpose": "The year on every ticket stub, and the ? on an open slot. The only display element on a stub."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Uppercase section heads on the night ground (Er tidslinje, Lag (n))."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "The docked LÅS button."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Hints and running text in the player world; hint line at 0.95rem in Night Muted."
+      },
+      "body-strong": {
+        "displayName": "Body Strong",
+        "purpose": "Song titles on stubs; team names on bands at 0.9rem."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase tracked sub-line under the wristband headline (team name)."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Artist line on a stub, footer (0.8rem), offline tag (0.7rem bold)."
+      },
+      "host-body": {
+        "displayName": "Host Body",
+        "purpose": "Incumbent host console text and buttons (system UI stack)."
+      },
+      "host-headline": {
+        "displayName": "Host Headline",
+        "purpose": "Incumbent host console page titles."
+      }
+    },
+    "shadows": [
+      {
+        "name": "snap-inset",
+        "value": "inset 0 0 0 6px rgb(23 18 46 / 0.12)",
+        "purpose": "The only depth in the player world: turns the wristband's paper snap into a pressed disc."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Shared easing for the wristband wipe, the slot tear-open, and the host pop-in."
+      },
+      {
+        "name": "band-in",
+        "value": "clip-path inset(0 100% 0 0) to inset(0) over 0.5s",
+        "purpose": "Wristband wipes in left to right whenever its owner or headline changes."
+      },
+      {
+        "name": "tear-open",
+        "value": "scaleY(0.4), opacity 0, min-height 0 to rest over 0.35s",
+        "purpose": "The chosen slot grows open into the lime ? stub."
+      },
+      {
+        "name": "host-pop",
+        "value": "scale(0.95), opacity 0 to rest over 0.25-0.3s",
+        "purpose": "Incumbent host console: result panel entry."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none",
+        "purpose": "All animation is removed under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "column",
+        "value": "560px",
+        "purpose": "Max content width for both worlds; phones only, no other breakpoints."
+      },
+      {
+        "name": "band-grid",
+        "value": "9 teams",
+        "purpose": "Team band grid switches from 2 to 3 columns at 9 or more teams (count-based, not width-based)."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Lock Button",
+      "kind": "button",
+      "refersTo": "lock-button",
+      "description": "The docked primary action on a team's turn; acid lime because it is pressable.",
+      "html": "<button class=\"ds-lock\">Lås</button>",
+      "css": ".ds-lock { display:flex; align-items:center; justify-content:center; width:100%; min-height:64px; border:none; border-radius:10px; background:#d7ff3d; color:#17122e; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:2rem; font-weight:900; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; } .ds-lock:focus-visible { outline:3px solid #d7ff3d; outline-offset:2px; } .ds-lock:active { transform:translateY(1px); }"
+    },
+    {
+      "name": "Lock Button Disabled",
+      "kind": "button",
+      "refersTo": "lock-button-disabled",
+      "description": "Before a slot is chosen: fully opaque, night fill, dashed perforation edge, muted prompt.",
+      "html": "<button class=\"ds-lock-off\" disabled>Välj en lucka</button>",
+      "css": ".ds-lock-off { display:flex; align-items:center; justify-content:center; width:100%; min-height:64px; border:2px dashed rgb(241 238 251 / 0.3); border-radius:10px; background:#221a42; color:#b9b3d6; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:1.5rem; font-weight:900; letter-spacing:0.06em; text-transform:uppercase; }"
+    },
+    {
+      "name": "Wristband",
+      "kind": "custom",
+      "refersTo": "wristband-mine",
+      "description": "Full-bleed team-colour header naming whose screen it is, with a paper snap; wipes in on change.",
+      "html": "<header class=\"ds-wristband\" style=\"background:#e11d48;color:#fff\"><h1 class=\"ds-wb-big\">Er tur!</h1><div class=\"ds-wb-sub\">Discokungarna</div></header>",
+      "css": ".ds-wristband { position:relative; padding:28px 72px 18px 20px; background:#2e2556; color:#f1eefb; animation:ds-band-in .5s cubic-bezier(0.16,1,0.3,1); } .ds-wristband::after { content:''; position:absolute; right:22px; bottom:20px; width:30px; height:30px; border-radius:50%; background:#f4f5f8; box-shadow:inset 0 0 0 6px rgb(23 18 46 / 0.12); } .ds-wb-big { margin:0; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:clamp(3.4rem,17vw,4.4rem); font-weight:900; line-height:0.85; text-transform:uppercase; } .ds-wb-sub { margin-top:8px; font-family:Archivo, system-ui, sans-serif; font-size:0.95rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; opacity:0.92; } @keyframes ds-band-in { from { clip-path:inset(0 100% 0 0); } to { clip-path:inset(0 0 0 0); } }"
+    },
+    {
+      "name": "Team Band",
+      "kind": "chip",
+      "refersTo": "team-band",
+      "description": "A team as a solid colour pill with a paper count disc; tap to show its timeline. Shown, offline and winner states.",
+      "html": "<div style=\"display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:#17122e;padding:8px\"><button class=\"ds-band ds-shown\" style=\"background:#e11d48;color:#fff\"><span class=\"ds-band-name\">Discokungarna</span><span class=\"ds-count\">3</span></button><button class=\"ds-band\" style=\"background:#8b5cf6;color:#fff\"><span class=\"ds-band-name\">Slask<span class=\"ds-off\">offline</span></span><span class=\"ds-count\" style=\"opacity:.55\">3</span></button></div>",
+      "css": ".ds-band { display:flex; align-items:center; justify-content:space-between; gap:4px; min-height:44px; padding:0 4px 0 10px; border:none; border-radius:22px; font-family:Archivo, system-ui, sans-serif; font-size:0.9rem; font-weight:700; line-height:1.1; text-align:left; outline:2px solid transparent; outline-offset:2px; cursor:pointer; } .ds-band.ds-shown { outline-color:#f1eefb; } .ds-band:focus-visible { outline:3px solid #d7ff3d; } .ds-band-name { min-width:0; } .ds-count { display:grid; place-items:center; min-width:28px; height:28px; padding:0 5px; border-radius:14px; background:#f4f5f8; color:#17122e; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:1rem; font-weight:900; font-variant-numeric:tabular-nums; } .ds-off { display:table; margin-top:2px; padding:1px 6px; border-radius:4px; background:#17122e; color:#f4f5f8; font-size:0.7rem; font-weight:700; }"
+    },
+    {
+      "name": "Ticket Stub",
+      "kind": "card",
+      "refersTo": "ticket-stub",
+      "description": "A song as a notched paper ticket: display-face year, dashed tear line, title and artist.",
+      "html": "<div style=\"background:#17122e;padding:12px\"><div class=\"ds-stub\"><span class=\"ds-year\">1977</span><span class=\"ds-stub-text\"><b>Dancing Queen</b><span class=\"ds-artist\">ABBA</span></span></div></div>",
+      "css": ".ds-stub { display:flex; align-items:center; gap:14px; min-height:72px; padding:8px 16px; border-radius:6px; background:#f4f5f8; color:#17122e; font-family:Archivo, system-ui, sans-serif; -webkit-mask:radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; mask:radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; } .ds-year { flex:none; width:3.1ch; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:2.5rem; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; } .ds-stub-text { display:flex; flex-direction:column; padding-left:14px; border-left:2px dashed #c9cbd6; line-height:1.25; } .ds-artist { color:#565072; font-size:0.85rem; }"
+    },
+    {
+      "name": "Won Stub",
+      "kind": "card",
+      "refersTo": "ticket-stub-won",
+      "description": "The card just won stays lime until the next turn.",
+      "html": "<div class=\"ds-stub-won\"><span class=\"ds-year\">1982</span><span class=\"ds-stub-text\"><b>Billie Jean</b><span>Michael Jackson</span></span></div>",
+      "css": ".ds-stub-won { display:flex; align-items:center; gap:14px; min-height:72px; padding:8px 16px; border-radius:6px; background:#d7ff3d; color:#17122e; font-family:Archivo, system-ui, sans-serif; -webkit-mask:radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; mask:radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; } .ds-year { width:3.1ch; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:2.5rem; font-weight:900; line-height:1; } .ds-stub-text { display:flex; flex-direction:column; padding-left:14px; border-left:2px dashed rgb(23 18 46 / 0.3); }"
+    },
+    {
+      "name": "Perforation Slot",
+      "kind": "button",
+      "refersTo": "ticket-stub-open",
+      "description": "Perforations between stubs are the slots; tapping one tears the strip open into a lime ? stub.",
+      "html": "<div style=\"background:#17122e;padding:12px\"><button class=\"ds-perf\" aria-label=\"Mellan 1966 och 1977\"><span class=\"ds-plus\"></span></button><button class=\"ds-open\"><span class=\"ds-q\">?</span><span class=\"ds-open-text\">Här – mellan 1966 och 1977</span></button></div>",
+      "css": ".ds-perf { display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:0 10px; border:none; border-radius:6px; background:none; cursor:pointer; } .ds-perf::before, .ds-perf::after { content:''; flex:1; border-top:2px dashed rgb(241 238 251 / 0.3); } .ds-plus { position:relative; flex:none; width:26px; height:26px; border:2px solid rgb(241 238 251 / 0.55); border-radius:50%; } .ds-plus::before, .ds-plus::after { content:''; position:absolute; inset:0; margin:auto; width:10px; height:2px; background:#f1eefb; } .ds-plus::after { transform:rotate(90deg); } .ds-perf:hover .ds-plus { border-color:#d7ff3d; } .ds-perf:focus-visible, .ds-open:focus-visible { outline:3px solid #d7ff3d; outline-offset:2px; } .ds-open { display:flex; align-items:center; gap:14px; width:100%; min-height:72px; margin:4px 0; padding:8px 16px; border:3px dashed #d7ff3d; border-radius:6px; background:rgb(215 255 61 / 0.1); color:#d7ff3d; font-family:Archivo, system-ui, sans-serif; font-weight:700; text-align:left; cursor:pointer; } .ds-q { width:3.1ch; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:2.5rem; font-weight:900; line-height:1; } .ds-open-text { padding-left:14px; border-left:2px dashed rgb(215 255 61 / 0.4); }"
+    },
+    {
+      "name": "Verdict Tag",
+      "kind": "chip",
+      "refersTo": "verdict-tag",
+      "description": "Small ink tag announcing the game-ending card.",
+      "html": "<span class=\"ds-verdict\">Det är klart – 7 kort!</span>",
+      "css": ".ds-verdict { display:inline-block; padding:2px 10px; border-radius:4px; background:#17122e; color:#f4f5f8; font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif; font-size:1.1rem; font-weight:900; letter-spacing:0.06em; text-transform:uppercase; }"
+    },
+    {
+      "name": "Host Primary Button (incumbent)",
+      "kind": "button",
+      "refersTo": "host-button-primary",
+      "description": "Host and entry screens only: the one green primary action.",
+      "html": "<button class=\"ds-host-primary\">Starta spelet</button>",
+      "css": ".ds-host-primary { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 1.1rem; border:1px solid #22c55e; border-radius:14px; background:#22c55e; color:#052e16; font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; font-weight:600; cursor:pointer; } .ds-host-primary:focus-visible { outline:3px solid #60a5fa; outline-offset:2px; } .ds-host-primary:disabled { opacity:0.45; cursor:not-allowed; }"
+    },
+    {
+      "name": "Host Input (incumbent)",
+      "kind": "input",
+      "refersTo": "host-input",
+      "description": "Host and entry screens only: slate field, e.g. the join code.",
+      "html": "<input class=\"ds-host-input\" placeholder=\"123456\" />",
+      "css": ".ds-host-input { width:100%; min-height:48px; padding:0 0.9rem; border:1px solid #334155; border-radius:14px; background:#0f172a; color:#f8fafc; font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; font-size:1.05rem; } .ds-host-input:focus-visible { outline:3px solid #60a5fa; outline-offset:2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Festivalbiljetten",
+    "overview": "The game runs in two visual worlds, and which one applies is decided by route. **The team's phone (`/play/:code`) is Festivalbiljetten**: a night-field indigo ground, every song a thermal-white festival ticket stub dated by its year, every team a flat wristband of its own colour, and one acid lime reserved for the thing you press. It is built to be read in a one-second glance across a loud room: whose band owns the top of the screen, every team's count, our own stub strip, the slot we picked. Everything in this world is scoped under the `.fest` wrapper (`src/play.css`), so none of it leaks onto the host.\n\n**The host's phone and the entry screens (`/`, `/host`, `/host/:code`, `/host/songs`, `/join/:code`, and the plain fallback screens inside Play such as \"Spelet finns inte längre\" and \"Spelet är fullt\") keep the incumbent dark-slate console** from `src/index.css`: slate surfaces, system-ui type, a single green primary, 14px rounding throughout. It is the original POC look and is documented here as it stands; it has not been redesigned and this file does not propose one. New player-surface work extends Festivalbiljetten; new host work extends the slate console until a deliberate host redesign replaces it.\n\nFestivalbiljetten is flat print, not texture: bands are solid team colour, the snap on the wristband is a plain paper disc, tickets are flat paper with notched edges and a dashed tear line. Its drama comes from scale (a condensed 900-weight display face at up to 4.4rem) and from the one lime colour, not from effects.",
+    "keyCharacteristics": [
+      "Two route-scoped worlds: Festivalbiljetten for teams, dark-slate console for the host and entry screens.",
+      "Night indigo ground, thermal-white ticket paper, ink-indigo print.",
+      "Team colour appears only as solid wristband fill, full-bleed or as a pill.",
+      "Acid lime marks what can be pressed, plus the one stub just won.",
+      "Big Shoulders Display for years, banners and the lock button; Archivo for everything you read.",
+      "Perforations between stubs are the placement slots."
+    ],
+    "rules": [
+      {
+        "name": "The Pressable Lime Rule",
+        "body": "Acid lime goes on things a team can press (lock, open slot, focus, hover) and on the single just-won stub. Never on decoration, headings, or text on the night ground outside the open slot.",
+        "section": "colors"
+      },
+      {
+        "name": "The Fabric Rule",
+        "body": "Team colour is a fill, never a text colour or a border on night. A team is identified by a solid band of its colour with contrast-chosen text on it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Scoped World Rule",
+        "body": "Festivalbiljetten tokens live under `.fest` and the slate tokens live on `:root`. Do not mix them: no slate green or blue focus ring on a player screen, no indigo or lime on a host screen.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Headline per Stub Rule",
+        "body": "On a stub only the year is set in the display face. Title and artist are Archivo, and nothing else on the stub competes with the year.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Count Rule",
+        "body": "Years and card counts use tabular figures so columns of stubs and band counts align.",
+        "section": "typography"
+      },
+      {
+        "name": "The Whole Room at Once Rule",
+        "body": "All teams fit on screen in the band grid; team names clamp to two lines instead of truncating to one or scrolling sideways.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Print Rule",
+        "body": "Nothing floats. A surface is distinguished by its paper or fabric colour, never by a cast shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** scope every player-world style under the `.fest` wrapper and set the browser theme colour to Night while it is mounted.",
+      "**Do** give every team its own solid band of colour, with text chosen by the contrast helper.",
+      "**Do** keep every stub the same height (72px minimum) and let only the year speak in the display face.",
+      "**Do** keep all teams visible in the band grid: 2 columns up to 8 teams, 3 above.",
+      "**Do** keep the disabled lock fully opaque and readable; signal \"not yet\" with the dashed edge and muted prompt.",
+      "**Do** keep host and entry screens on the slate console tokens until a deliberate host redesign."
+    ],
+    "donts": [
+      "**Don't** use Acid Lime on anything that cannot be pressed, except the one just-won stub.",
+      "**Don't** set team colours as text or outlines on the night ground.",
+      "**Don't** show teams in a sideways-scrolling tab row on the player screen; the band grid replaced it.",
+      "**Don't** truncate team names to one line; clamp to two.",
+      "**Don't** add drop shadows; the player world is flat print.",
+      "**Don't** bring slate green, slate blue focus rings or system-ui type into a `.fest` screen, or lime and indigo into a host screen."
+    ]
+  }
+}
