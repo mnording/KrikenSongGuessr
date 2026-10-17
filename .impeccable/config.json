@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-10-17T04:13:28.183Z",
         "reason": "Claude: spent decision mockup, not shipped UI; the shipped Play screens are reviewed separately"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/top2.html"
+        ],
+        "createdAt": "2026-10-17T04:17:06.694Z",
+        "reason": "Claude: spent decision mockup comparing two directions (incl. the unchosen Jukebox fonts); not shipped UI"
       }
     ]
   }
