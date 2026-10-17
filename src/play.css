@@ -181,15 +181,20 @@
   outline-color: var(--fest-text);
 }
 
-.band.offline {
-  opacity: 0.6;
+/* Offline: namnet ska fortfarande gå att läsa, bara räknaren bleknar. */
+.band.offline .band-count {
+  opacity: 0.55;
 }
 
 .band-off {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  opacity: 0.85;
+  display: table;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .band.winner .band-count {
