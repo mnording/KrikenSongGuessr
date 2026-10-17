@@ -26,3 +26,7 @@ dist-ssr
 # Firebase
 .firebase
 *-debug.log
+
+# Impeccable working files
+.impeccable/review
+.impeccable/preview
