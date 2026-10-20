@@ -44,15 +44,18 @@ service cloud.firestore {
           && uid == request.auth.uid
           && game(code).status == 'lobby'
           && game(code).hostUid != request.auth.uid
-          && request.resource.data.keys().hasOnly(['name', 'color', 'mascot', 'connected', 'lastSeen', 'joinedAt', 'pendingSlot'])
+          && request.resource.data.keys().hasOnly(['name', 'color', 'mascot', 'level', 'connected', 'lastSeen', 'joinedAt', 'pendingSlot'])
           && validProfile(request.resource.data);
 
-        // Laget ändrar namn, maskot, färg, närvaro och vald lucka. Spelledaren skriver tidslinjen.
+        // Laget ändrar namn, maskot, färg, närvaro, vald lucka och sin gissning. Nivån bara i lobbyn.
+        // Spelledaren skriver tidslinjen.
         allow update: if isHost(code)
           || (signedIn()
             && uid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['name', 'color', 'mascot', 'connected', 'lastSeen', 'pendingSlot'])
+                 .hasOnly(['name', 'color', 'mascot', 'level', 'connected', 'lastSeen', 'pendingSlot', 'guess'])
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['level'])
+              || game(code).status == 'lobby')
             && validProfile(request.resource.data));
 
         // Spelledaren tar bort lag, och ett lag får lämna i lobbyn.
@@ -65,16 +68,14 @@ service cloud.firestore {
 
         // Ett drag per tur: dokument-id är turens nummer, och drag kan inte ändras.
         allow create: if signedIn()
-          && request.resource.data.keys().hasOnly(['teamUid', 'turnIndex', 'slotIndex', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['teamUid', 'turnIndex', 'slotIndex', 'choice', 'createdAt'])
           && request.resource.data.teamUid == request.auth.uid
           && game(code).status == 'playing'
           && game(code).phase == 'placing'
           && game(code).currentTeamUid == request.auth.uid
           && request.resource.data.turnIndex == game(code).turnIndex
           && moveId == string(game(code).turnIndex)
-          && request.resource.data.slotIndex is int
-          && request.resource.data.slotIndex >= 0
-          && request.resource.data.slotIndex <= 15;
+          && validMove(request.resource.data);
 
         allow update: if false;
         allow delete: if isHost(code);
@@ -95,7 +96,29 @@ service cloud.firestore {
         // Maskoten är frivillig så att lag från före maskotarna fortfarande går att uppdatera.
         // Med maskot måste färgen vara maskotens.
         && (!('mascot' in data)
-          || (data.mascot in mascotColors() && mascotColors()[data.mascot] == data.color));
+          || (data.mascot in mascotColors() && mascotColors()[data.mascot] == data.color))
+        && (!('level' in data) || data.level in ['easy', 'hard'])
+        && (!('guess' in data)
+          || data.guess == null
+          || (data.guess.keys().hasOnly(['turnIndex', 'choice'])
+            && data.guess.turnIndex is int
+            && validChoice(data.guess.choice)));
+    }
+
+    // Ett drag är antingen en lucka i tidslinjen eller ett av fyra artistalternativ, aldrig båda.
+    function validMove(data) {
+      return ('slotIndex' in data
+          && !('choice' in data)
+          && data.slotIndex is int
+          && data.slotIndex >= 0
+          && data.slotIndex <= 15)
+        || ('choice' in data
+          && !('slotIndex' in data)
+          && validChoice(data.choice));
+    }
+
+    function validChoice(choice) {
+      return choice is int && choice >= 0 && choice <= 3;
     }
 
     // Maskotarna och färgen som hör till var och en. Samma lista som src/game/mascots.ts.

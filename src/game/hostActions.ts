@@ -14,9 +14,10 @@ import {
   toTimelineCard,
   type Song,
 } from '../engine/game';
+import { answerIndex, evaluateArtistChoice, pickChoices } from '../engine/artist';
 import { db } from '../firebase';
 import { gameRef, moveRef, movesRef, privateRef, teamRef } from './refs';
-import type { GameDoc, MoveDoc, PrivateState, Team } from './types';
+import { gameMode, teamLevel, type GameDoc, type GameMode, type MoveDoc, type PrivateState, type Team } from './types';
 
 const HOST_GAME_KEY = 'host.gameCode';
 
@@ -63,6 +64,15 @@ export async function setTargetLength(code: string, target: number) {
   await batch.commit();
 }
 
+export async function setMode(code: string, mode: GameMode) {
+  const batch = writeBatch(db);
+  batch.update(gameRef(code), { 'settings.mode': mode });
+  await batch.commit();
+}
+
+/** Familj-läget visar fyra artister för varje kort. Tidslinjeläget har inga. */
+const choicesFor = (game: GameDoc, song: Song, songs: Song[]) => (gameMode(game) === 'family' ? pickChoices(song, songs) : null);
+
 export async function removeTeam(code: string, uid: string) {
   const batch = writeBatch(db);
   batch.delete(teamRef(code, uid));
@@ -95,6 +105,7 @@ export async function startGame(code: string, game: GameDoc, teams: Team[], song
     batch.update(teamRef(code, team.uid), {
       timeline: [startCards[i]],
       pendingSlot: null,
+      guess: null,
     });
   });
   const state: PrivateState = {
@@ -114,14 +125,25 @@ export async function startGame(code: string, game: GameDoc, teams: Team[], song
     winnerUids: [],
     endReason: null,
     cardsLeft: cardsLeft(first.deck),
+    choices: choicesFor(game, state.currentCard!, songs),
   });
   await batch.commit();
   return state.currentCard!;
 }
 
+/**
+ * Utvärderar lagets drag. Ett lätt lag i Familj-läget har valt artist, alla andra har lagt i en lucka.
+ * I Familj-läget visas också vilket alternativ som var rätt, så att alla som gissade med ser hur det gick.
+ */
 export async function reveal(code: string, game: GameDoc, team: Team, move: MoveDoc, song: Song, artFor: ArtLookup) {
   const card = toTimelineCard(song, await artFor(song));
-  const evaluation = evaluatePlacement(team.timeline ?? [], move.slotIndex, card);
+  const timeline = team.timeline ?? [];
+  const choices = game.choices ?? [];
+  const family = gameMode(game) === 'family';
+  const byArtist = family && teamLevel(team) === 'easy';
+  const evaluation = byArtist
+    ? evaluateArtistChoice(timeline, choices, move.choice ?? -1, card)
+    : { ...evaluatePlacement(timeline, move.slotIndex ?? -1, card), slotIndex: move.slotIndex ?? -1 };
   const batch = writeBatch(db);
   if (evaluation.correct) {
     batch.update(teamRef(code, team.uid), { timeline: evaluation.timeline });
@@ -131,10 +153,12 @@ export async function reveal(code: string, game: GameDoc, team: Team, move: Move
     lastResult: {
       teamUid: team.uid,
       turnIndex: game.turnIndex,
-      slotIndex: move.slotIndex,
+      slotIndex: evaluation.slotIndex,
       correct: evaluation.correct,
       card,
       reachedTarget: hasReachedTarget(evaluation.timeline, game.settings.targetLength),
+      choice: byArtist ? (move.choice ?? null) : null,
+      answer: family ? answerIndex(choices, card.artist) : null,
     },
   });
   await batch.commit();
@@ -192,6 +216,7 @@ export async function nextTurn(
     currentTeamUid: nextUid,
     lastResult: null,
     cardsLeft: cardsLeft(drawn.deck),
+    choices: choicesFor(game, card, songs),
   });
   await batch.commit();
   return card;
@@ -200,7 +225,7 @@ export async function nextTurn(
 /** Tillbaka till lobbyn med samma lag. Nya lag kan också gå med. */
 export async function playAgain(code: string, teams: Team[]) {
   const batch = writeBatch(db);
-  for (const team of teams) batch.update(teamRef(code, team.uid), { timeline: [], pendingSlot: null });
+  for (const team of teams) batch.update(teamRef(code, team.uid), { timeline: [], pendingSlot: null, guess: null });
   batch.update(gameRef(code), {
     status: 'lobby',
     phase: 'placing',
@@ -209,6 +234,7 @@ export async function playAgain(code: string, teams: Team[]) {
     lastResult: null,
     winnerUids: [],
     endReason: null,
+    choices: null,
   });
   batch.set(privateRef(code), { deckOrder: [], deckIndex: 0, currentCard: null }, { merge: true });
   await batch.commit();

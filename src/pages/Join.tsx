@@ -8,7 +8,7 @@ import { useUser } from '../hooks/misc';
 import { gameRef, teamRef } from '../game/refs';
 import { joinGame } from '../game/teamActions';
 import type { MascotId } from '../game/mascots';
-import type { GameDoc } from '../game/types';
+import { gameMode, type GameDoc, type TeamLevel } from '../game/types';
 import { errorMessage } from '../util';
 
 export default function Join() {
@@ -58,11 +58,11 @@ export default function Join() {
     );
   }
 
-  const submit = async (name: string, mascot: MascotId) => {
+  const submit = async (name: string, mascot: MascotId, level: TeamLevel) => {
     setBusy(true);
     setError(null);
     try {
-      await joinGame(code, user.uid, name, mascot);
+      await joinGame(code, user.uid, name, mascot, level);
       navigate(`/play/${code}`, { replace: true });
     } catch (err) {
       setError(`Kunde inte gå med: ${errorMessage(err)}`);
@@ -72,7 +72,7 @@ export default function Join() {
 
   return (
     <Screen title={`Gå med i spel ${code}`}>
-      <ProfileForm submitLabel="Gå med" busy={busy} onSubmit={submit} />
+      <ProfileForm submitLabel="Gå med" chooseLevel={gameMode(game.data) === 'family'} busy={busy} onSubmit={submit} />
       <ErrorText error={error} />
     </Screen>
   );

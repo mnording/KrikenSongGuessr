@@ -1,26 +1,45 @@
 import { useState, type FormEvent } from 'react';
 import { getMascot, MASCOTS, type MascotId } from '../game/mascots';
+import type { TeamLevel } from '../game/types';
 import { MascotPin } from './Mascot';
+
+const LEVELS: { value: TeamLevel; name: string; text: string }[] = [
+  { value: 'easy', name: 'Lätt', text: 'Välj vem som sjunger bland fyra artister.' },
+  { value: 'hard', name: 'Svår', text: 'Lägg låten rätt i tidslinjen efter år.' },
+];
 
 type Props = {
   initialName?: string;
   initialMascot?: MascotId;
   takenMascots?: string[];
+  /** Familj-läget: laget väljer nivå. */
+  chooseLevel?: boolean;
+  initialLevel?: TeamLevel;
   submitLabel: string;
   busy?: boolean;
-  onSubmit: (name: string, mascot: MascotId) => void;
+  onSubmit: (name: string, mascot: MascotId, level: TeamLevel) => void;
 };
 
-export function ProfileForm({ initialName = '', initialMascot, takenMascots = [], submitLabel, busy, onSubmit }: Props) {
+export function ProfileForm({
+  initialName = '',
+  initialMascot,
+  takenMascots = [],
+  chooseLevel = false,
+  initialLevel = 'hard',
+  submitLabel,
+  busy,
+  onSubmit,
+}: Props) {
   const firstFree = MASCOTS.find((m) => !takenMascots.includes(m.id))?.id ?? MASCOTS[0].id;
   const [name, setName] = useState(initialName);
   const [mascot, setMascot] = useState<MascotId>(initialMascot ?? firstFree);
+  const [level, setLevel] = useState<TeamLevel>(initialLevel);
   const chosen = getMascot(mascot)!;
   const valid = name.trim().length >= 1;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (valid && !busy) onSubmit(name, mascot);
+    if (valid && !busy) onSubmit(name, mascot, level);
   };
 
   return (
@@ -55,6 +74,18 @@ export function ProfileForm({ initialName = '', initialMascot, takenMascots = []
         <strong aria-live="polite">{chosen.name}</strong>
         <p>{chosen.backstory}</p>
       </div>
+      {chooseLevel && (
+        <fieldset className="levels">
+          <legend>Nivå</legend>
+          {LEVELS.map((l) => (
+            <label key={l.value} className={`level-option${level === l.value ? ' selected' : ''}`}>
+              <input type="radio" name="level" value={l.value} checked={level === l.value} onChange={() => setLevel(l.value)} />
+              <strong>{l.name}</strong>
+              <span>{l.text}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       <button type="submit" className="primary" disabled={!valid || busy}>
         {submitLabel}
       </button>

@@ -524,3 +524,107 @@
 .fest .link {
   color: inherit;
 }
+
+/* ── Familj: fyra artister som biljettremsor ── */
+
+.choices ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* Inte valbar just nu, men fortfarande fullt läsbar. */
+.choice:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.choice-letter {
+  flex: none;
+  width: 1.4ch;
+  font-family: var(--display);
+  font-size: 1.7rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.choice-name {
+  flex: 1;
+  min-width: 0;
+  padding-left: 14px;
+  border-left: 2px dashed #c9cbd6;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.choice.selected {
+  outline: 3px solid var(--act);
+  outline-offset: 2px;
+}
+
+/* Rätt svar lyser som ett just vunnet kort. */
+.choice.answer {
+  background: var(--act);
+}
+
+.choice.answer .choice-name {
+  border-left-color: rgb(23 18 46 / 0.3);
+}
+
+.choice.missed .choice-name {
+  color: #b42318;
+  text-decoration: line-through;
+}
+
+.choice-tag {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.75rem;
+}
+
+/* Hur det gick för laget som gissade med. */
+.guess-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 4px 0;
+  color: var(--fest-muted);
+  font-weight: 700;
+}
+
+.guess-result.right {
+  color: var(--fest-text);
+}
+
+.guess-result .mascot-pin {
+  width: 44px;
+}
+
+.fest .level-option.selected {
+  border-color: var(--fest-text);
+}
+
+.fest .level-option span {
+  color: var(--fest-muted);
+}

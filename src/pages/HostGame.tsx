@@ -14,11 +14,23 @@ import {
   removeTeam,
   reveal,
   saveDeviceId,
+  setMode,
   setTargetLength,
   startGame,
 } from '../game/hostActions';
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
-import type { GameDoc, MoveDoc, PrivateState, Team, TeamDoc } from '../game/types';
+import { gameMode, teamLevel, type GameDoc, type GameMode, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
+
+const MODES: { value: GameMode; name: string; text: string }[] = [
+  { value: 'timeline', name: 'Tidslinje', text: 'Alla lägger låten rätt i tidslinjen efter år.' },
+  { value: 'family', name: 'Familj', text: 'Varje lag väljer nivå: lätt gissar artist bland fyra, svår lägger i tidslinjen. Alla får gissa med.' },
+];
+
+/** Nivån som en kort etikett i spelledarens listor, bara i Familj-läget. */
+function LevelBadge({ game, team }: { game: GameDoc; team: Team }) {
+  if (gameMode(game) !== 'family') return null;
+  return <span className="badge muted">{teamLevel(team) === 'easy' ? 'Lätt' : 'Svår'}</span>;
+}
 import { login } from '../spotify/auth';
 import { albumArt, loadSongs, resolveUri } from '../spotify/catalog';
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
@@ -256,6 +268,7 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
         {teams.map((t) => (
           <li key={t.uid}>
             <TeamName team={t} now={now} />
+            <LevelBadge game={game} team={t} />
             <button
               type="button"
               className="link danger"
@@ -268,6 +281,23 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
           </li>
         ))}
       </ul>
+
+      <fieldset className="setting modes">
+        <legend>Spelläge</legend>
+        {MODES.map((m) => (
+          <label key={m.value} className={`level-option${gameMode(game) === m.value ? ' selected' : ''}`}>
+            <input
+              type="radio"
+              name="mode"
+              value={m.value}
+              checked={gameMode(game) === m.value}
+              onChange={() => void setMode(code, m.value)}
+            />
+            <strong>{m.name}</strong>
+            <span>{m.text}</span>
+          </label>
+        ))}
+      </fieldset>
 
       <div className="setting">
         <label htmlFor="target">Kort för att vinna (inklusive startkortet)</label>
@@ -320,6 +350,10 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
   const card = state?.currentCard;
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const selectedSlot = move.data?.slotIndex ?? (game.phase === 'placing' ? (team?.pendingSlot ?? null) : null);
+  const byArtist = Boolean(team && gameMode(game) === 'family' && teamLevel(team) === 'easy');
+  const choices = game.choices ?? [];
+  const picked = move.data?.choice ?? result?.choice ?? null;
+  const pickedName = picked !== null ? choices[picked] : undefined;
 
   return (
     <>
@@ -374,13 +408,16 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
         <div className={`result ${result.correct ? 'correct' : 'wrong'}`} role="status">
           <strong>{result.correct ? 'Rätt!' : 'Fel!'}</strong>{' '}
           {result.card.title} – {result.card.artist} ({result.card.year})
+          {byArtist && <p>Laget valde {pickedName ?? 'ingen artist'}.</p>}
           {result.reachedTarget && <p><strong>{team?.name} har {game.settings.targetLength} kort och vinner!</strong></p>}
         </div>
       )}
 
       {game.phase === 'placing' && (
         <p className="move-status">
-          {move.data ? `${team?.name ?? 'Laget'} har låst sitt svar.` : `Väntar på att ${team?.name ?? 'laget'} placerar…`}
+          {move.data
+            ? `${team?.name ?? 'Laget'} har låst ${pickedName ?? 'sitt svar'}.`
+            : `Väntar på att ${team?.name ?? 'laget'} ${byArtist ? 'väljer artist' : 'placerar'}…`}
         </p>
       )}
 
@@ -415,6 +452,7 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
         {teams.map((t) => (
           <li key={t.uid} className={t.uid === game.currentTeamUid ? 'current' : undefined}>
             <TeamName team={t} now={now} />
+            <LevelBadge game={game} team={t} />
             <span className="score">{t.timeline?.length ?? 0} / {game.settings.targetLength}</span>
           </li>
         ))}

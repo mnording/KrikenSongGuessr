@@ -45,6 +45,15 @@ Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 
 `src/data/songs.json` har titel, artist och originalår. `spotifyUri` får vara tom: spelledarens telefon söker då fram spåret första gången och sparar svaret lokalt. Öppna `/host/songs`, tryck **Hitta alla på Spotify**, provspela, rätta fel träffar med ✎ och ladda ner en `songs.json` med URI:erna ifyllda.
 
+Spotify-sökningen väljer en ren version (utan svordomar) när det finns en lika bra träff. Låtar med `spotifyUri` i `songs.json`, eller som redan finns i spelledarens cache, påverkas inte.
+
+## Spellägen
+
+Spelledaren väljer läge i lobbyn (`settings.mode` på spelet, saknas det gäller tidslinje).
+
+- **Tidslinje:** som från början.
+- **Familj:** varje lag väljer nivå när det går med (`level` på laget, går bara att byta i lobbyn). Ett lätt lag väljer artist bland fyra (`choices` på spelet, `choice` i draget) och får kortet i årsordning om det är rätt. Ett svårt lag lägger i tidslinjen. Övriga lag gissar med (`guess` på laget), vilket inte ger några kort. Alternativen väljs i `src/engine/artist.ts`.
+
 ## Avvikelser från projektbriefen
 
 - `turnIndex` är turens löpnummer och fortsätter räkna mellan omgångar, så att gamla drag aldrig matchar en ny tur. Drag sparas som `moves/{turnIndex}`, ett per tur.
