@@ -41,7 +41,7 @@ export function ProfileForm({ initialName = '', initialMascot, takenMascots = []
           const selected = mascot === m.id;
           return (
             <label key={m.id} className={`mascot-option${selected ? ' selected' : ''}${taken ? ' taken' : ''}`} title={m.name}>
-              <input type="radio" name="mascot" value={m.id} checked={selected} onChange={() => setMascot(m.id)} />
+              <input type="radio" name="mascot" value={m.id} checked={selected} disabled={taken} onChange={() => setMascot(m.id)} />
               <MascotPin mascot={m.id} mood={selected ? 'happy' : 'idle'} animate={selected} />
               <span className="visually-hidden">
                 {m.name}
@@ -51,9 +51,8 @@ export function ProfileForm({ initialName = '', initialMascot, takenMascots = []
           );
         })}
       </fieldset>
-      <div id="mascot-intro" className="mascot-intro" aria-live="polite">
-        <strong>{chosen.name}</strong>
-        {takenMascots.includes(chosen.id) && chosen.id !== initialMascot && <span className="mascot-taken"> · ett annat lag har den</span>}
+      <div id="mascot-intro" className="mascot-intro">
+        <strong aria-live="polite">{chosen.name}</strong>
         <p>{chosen.backstory}</p>
       </div>
       <button type="submit" className="primary" disabled={!valid || busy}>

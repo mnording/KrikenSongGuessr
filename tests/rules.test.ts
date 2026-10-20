@@ -13,7 +13,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
-import { MASCOT_IDS } from '../src/game/mascots';
+import { MASCOTS } from '../src/game/mascots';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const PROJECT = 'demo-krikensongguessr';
@@ -166,11 +166,13 @@ describe('teams', () => {
     await assertSucceeds(setDoc(ref, old));
     await assertSucceeds(updateDoc(ref, { mascot: 'ulla', color: '#64748b' }));
     await assertFails(updateDoc(ref, { mascot: 'Ulla' }));
+    await assertFails(updateDoc(ref, { mascot: 'kalle', color: '#64748b' }));
   });
 
   it('har samma maskotlista som appen', () => {
-    const list = readFileSync('firestore.rules', 'utf8').match(/data\.mascot in \[([^\]]+)\]/)?.[1] ?? '';
-    expect(list.split(',').map((s) => s.trim().replace(/'/g, ''))).toEqual([...MASCOT_IDS]);
+    const rules = readFileSync('firestore.rules', 'utf8');
+    const pairs = [...rules.matchAll(/'([a-z]+)': '(#[0-9a-f]{6})'/g)].map(([, id, color]) => ({ id, color }));
+    expect(pairs).toEqual(MASCOTS.map(({ id, color }) => ({ id, color })));
   });
 
   it('låter spelledaren skriva tidslinje och ta bort lag', async () => {

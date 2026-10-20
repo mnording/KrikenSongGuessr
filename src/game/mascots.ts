@@ -1,5 +1,4 @@
 // Lagens maskotar. Varje maskot äger en av lagfärgerna, så att välja maskot också väljer färg.
-import type { TeamDoc } from './types';
 
 export const MASCOT_IDS = ['kalle', 'rickard', 'kicki', 'gunnar', 'bluesy', 'wilma', 'elvira', 'frasse', 'bosse', 'ulla'] as const;
 
@@ -80,9 +79,4 @@ export const MASCOTS: Mascot[] = [
 
 export function getMascot(id: string | undefined | null): Mascot | undefined {
   return MASCOTS.find((m) => m.id === id);
-}
-
-/** Lag som gick med före maskotarna har bara en färg. */
-export function teamMascot(team: Pick<TeamDoc, 'mascot'>): Mascot | undefined {
-  return getMascot(team.mascot);
 }

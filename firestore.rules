@@ -93,7 +93,25 @@ service cloud.firestore {
         && data.color is string
         && data.color.size() <= 16
         // Maskoten är frivillig så att lag från före maskotarna fortfarande går att uppdatera.
-        && (!('mascot' in data) || data.mascot in ['kalle', 'rickard', 'kicki', 'gunnar', 'bluesy', 'wilma', 'elvira', 'frasse', 'bosse', 'ulla']);
+        // Med maskot måste färgen vara maskotens.
+        && (!('mascot' in data)
+          || (data.mascot in mascotColors() && mascotColors()[data.mascot] == data.color));
+    }
+
+    // Maskotarna och färgen som hör till var och en. Samma lista som src/game/mascots.ts.
+    function mascotColors() {
+      return {
+        'kalle': '#e11d48',
+        'rickard': '#f97316',
+        'kicki': '#eab308',
+        'gunnar': '#22c55e',
+        'bluesy': '#14b8a6',
+        'wilma': '#3b82f6',
+        'elvira': '#8b5cf6',
+        'frasse': '#ec4899',
+        'bosse': '#a16207',
+        'ulla': '#64748b'
+      };
     }
   }
 }

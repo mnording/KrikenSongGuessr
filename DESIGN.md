@@ -341,7 +341,7 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 - **Cards and rows:** slate-surface fill, 14px (cards) or 10px (rows), 16px / 12px padding; the current team row gets a 2px text-colour outline.
 - **Turn banner and result:** the current team's turn banner fills with that team's colour (contrast-chosen text, 1.35rem, 800); the reveal result panel fills Host Correct or Host Wrong with a short pop-in.
 - **Timeline (host):** slate-surface cards with a 6px team-colour left edge and a 1.5rem 800 year; slots are 2px dashed slate-border boxes.
-- **Mascot picker (Join, and the lobby editor):** five-column grid of mascot pins; the selected one jumps and gets a ring, mascots other teams hold are dimmed, and the chosen mascot's name and backstory sit under the grid.
+- **Mascot picker (Join, and the lobby editor):** five-column grid of mascot pins; the selected one jumps and gets a ring, mascots other teams hold are dimmed and can't be picked, and the chosen mascot's name and backstory sit under the grid.
 
 ## Do's and Don'ts
 

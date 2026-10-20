@@ -301,8 +301,13 @@ label {
   width: 100%;
 }
 
+/* Ett annat lag har den. Går inte att välja, så att två lag aldrig ser likadana ut. */
+.mascot-option.taken {
+  cursor: not-allowed;
+}
+
 .mascot-option.taken .mascot-pin {
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 .mascot-option.selected .mascot-pin {
@@ -317,16 +322,10 @@ label {
   outline-offset: 7px;
 }
 
-.mascot-intro {
-  min-height: 4.6em;
-}
-
+/* Plats för två rader, så att knappen under inte hoppar när man byter maskot. */
 .mascot-intro p {
+  min-height: 2.9em;
   margin: 0.2rem 0 0;
-  color: var(--muted);
-}
-
-.mascot-taken {
   color: var(--muted);
 }
 

@@ -512,7 +512,7 @@
   outline-color: var(--act);
 }
 
-.fest :is(.mascot-intro p, .mascot-taken) {
+.fest .mascot-intro p {
   color: var(--fest-muted);
 }
 

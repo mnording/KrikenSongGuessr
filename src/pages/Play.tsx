@@ -94,7 +94,7 @@ function Wristband({ color, mascot, mood = 'idle', big, sub, mine = false }: Wri
   const pinned = Boolean(getMascot(mascot));
   return (
     <header
-      key={`${color}-${mascot}-${mood}-${typeof big === 'string' ? big : ''}`}
+      key={`${color}-${typeof big === 'string' ? big : ''}`}
       className={`wristband${mine ? ' mine' : ''}${pinned ? ' pinned' : ''}`}
       style={color ? { backgroundColor: color, color: textOn(color) } : undefined}
       role="status"
@@ -203,6 +203,7 @@ function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
       {editing && (
         <ProfileForm
           initialName={me.name}
+          // Ett lag från före maskotarna får maskoten med samma färg, så att det ser ut som förut.
           initialMascot={getMascot(me.mascot)?.id ?? MASCOTS.find((m) => m.color === me.color)?.id}
           takenMascots={teams.filter((t) => t.uid !== me.uid).flatMap((t) => (t.mascot ? [t.mascot] : []))}
           submitLabel="Spara"
@@ -295,12 +296,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         <Wristband color={current?.color} mascot={current?.mascot} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
       )}
 
-      <Bands
-        teams={teams}
-        now={now}
-        shownUid={shown.uid}
-        onShow={setViewUid}
-      />
+      <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} />
 
       {result && !(result.correct && result.teamUid === shown.uid) && (
         <div className="reveal">
