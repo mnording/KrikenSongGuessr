@@ -26,9 +26,14 @@ export function sameArtist(a: string, b: string): boolean {
   return artistKeys(b).some((key) => keys.has(key));
 }
 
-/** Avstånd i år mellan låtens år och artistens närmaste låt i listan. */
-function yearDistance(artist: string, year: number, songs: readonly Song[]): number {
-  return Math.min(...songs.filter((s) => s.artist === artist).map((s) => Math.abs(s.year - year)));
+/** Hur många decennier från låtens år varje artists närmaste låt ligger. */
+function decadesAway(year: number, songs: readonly Song[]): Map<string, number> {
+  const distance = new Map<string, number>();
+  for (const s of songs) {
+    const d = Math.floor(Math.abs(s.year - year) / 10);
+    distance.set(s.artist, Math.min(d, distance.get(s.artist) ?? d));
+  }
+  return distance;
 }
 
 /**
@@ -36,9 +41,8 @@ function yearDistance(artist: string, year: number, songs: readonly Song[]): num
  * så att man inte kan sålla bort dem bara på att de låter gamla, och delar ingen artist med varandra.
  */
 export function pickChoices(song: Song, songs: readonly Song[], random: () => number = Math.random): string[] {
-  const candidates = shuffle([...new Set(songs.map((s) => s.artist))], random).sort(
-    (a, b) => Math.floor(yearDistance(a, song.year, songs) / 10) - Math.floor(yearDistance(b, song.year, songs) / 10),
-  );
+  const distance = decadesAway(song.year, songs);
+  const candidates = shuffle([...distance.keys()], random).sort((a, b) => distance.get(a)! - distance.get(b)!);
   const choices = [song.artist];
   for (const artist of candidates) {
     if (choices.length === CHOICE_COUNT) break;

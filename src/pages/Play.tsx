@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import '../play.css';
 import { Link, Navigate, useParams } from 'react-router';
-import { ArtistChoices } from '../components/ArtistChoices';
+import { ChoiceCards } from '../components/ChoiceCards';
 import { ErrorText, Loading, Screen } from '../components/Common';
+import { FamilyRound } from '../components/FamilyRound';
 import { MascotPin } from '../components/Mascot';
 import { ProfileForm } from '../components/ProfileForm';
 import { TicketTimeline } from '../components/TicketTimeline';
@@ -10,8 +11,9 @@ import { MAX_TEAMS } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
-import { guessArtist, leaveGame, lockChoice, lockMove, selectSlot, updateProfile } from '../game/teamActions';
+import { leaveGame, lockChoice, lockMove, selectSlot, setLevel, updateProfile } from '../game/teamActions';
 import { getMascot, MASCOTS, type MascotMood } from '../game/mascots';
+import { LEVELS, showsChoices } from '../game/modes';
 import { gameMode, isOnline, teamLevel, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -208,21 +210,26 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
           // Ett lag från före maskotarna får maskoten med samma färg, så att det ser ut som förut.
           initialMascot={getMascot(me.mascot)?.id ?? MASCOTS.find((m) => m.color === me.color)?.id}
           takenMascots={teams.filter((t) => t.uid !== me.uid).flatMap((t) => (t.mascot ? [t.mascot] : []))}
-          chooseLevel={family}
-          initialLevel={teamLevel(me)}
           submitLabel="Spara"
-          onSubmit={(name, mascot, level) => {
-            updateProfile(code, me.uid, name, mascot, level)
+          onSubmit={(name, mascot) => {
+            updateProfile(code, me.uid, name, mascot)
               .then(() => setEditing(false))
               .catch((err) => setError(errorMessage(err)));
           }}
         />
       )}
       <ErrorText error={error} />
+      {/* Även lag som gick med innan spelledaren valde Familj ska se nivåvalet direkt, inte bakom Ändra. */}
       {family && (
-        <p className="hint">
-          Familj-läget. Ni spelar <strong>{teamLevel(me) === 'easy' ? 'Lätt: välj artist bland fyra' : 'Svår: lägg låten i tidslinjen'}</strong>.
-        </p>
+        <div className="card-box">
+          <ChoiceCards
+            legend="Familj-läget: välj nivå"
+            name="level"
+            options={LEVELS}
+            value={teamLevel(me)}
+            onChange={(level) => void setLevel(code, me.uid, level).catch((err) => setError(errorMessage(err)))}
+          />
+        </div>
       )}
       <p className="hint">Väntar på att spelledaren startar spelet…</p>
       <h2>Lag ({teams.length})</h2>
@@ -256,12 +263,9 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const myTurn = game.currentTeamUid === me.uid;
   const locked = Boolean(move.data);
   // Familj: ett lätt lag väljer artist i stället för lucka, och alla andra får gissa med.
-  const family = gameMode(game) === 'family';
-  const choices = family && game.choices?.length ? game.choices : null;
-  const byArtist = myTurn && family && teamLevel(me) === 'easy';
+  const byArtist = myTurn && gameMode(game) === 'family' && teamLevel(me) === 'easy';
   const canPlace = myTurn && !byArtist && game.phase === 'placing' && !locked && !move.loading;
   const canPick = byArtist && game.phase === 'placing' && !locked && !move.loading;
-  const myGuess = me.guess?.turnIndex === game.turnIndex ? me.guess.choice : null;
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const shownUid = viewUid ?? (myTurn ? me.uid : game.currentTeamUid ?? me.uid);
   const shown = teams.find((t) => t.uid === shownUid) ?? me;
@@ -296,10 +300,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const resultTeam = result ? teams.find((t) => t.uid === result.teamUid) : undefined;
   const resultMine = result?.teamUid === me.uid;
   const lockedText = 'Låst här';
-  // Lagets eget val att visa bland alternativen: draget för laget i tur, annars gissningen.
-  const ownChoice = myTurn ? (byArtist ? (result?.choice ?? move.data?.choice ?? pick) : null) : myGuess;
-  const showChoices = Boolean(choices && (byArtist || !myTurn || result));
-  const guessedRight = Boolean(result && !resultMine && myGuess !== null && result.answer === myGuess);
+  const showChoices = showsChoices(game, myTurn, byArtist);
 
   return (
     <FestPage>
@@ -355,28 +356,15 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         ) : null}
       </p>
 
-      {result && !resultMine && myGuess !== null && result.answer != null && (
-        <p className={`guess-result${guessedRight ? ' right' : ''}`}>
-          <MascotPin mascot={me.mascot} mood={guessedRight ? 'happy' : 'sad'} animate />
-          {guessedRight ? 'Ni gissade rätt!' : 'Ni gissade fel den här gången.'}
-        </p>
-      )}
-
-      {showChoices && choices && (
-        <ArtistChoices
-          choices={choices}
-          label={result ? 'Vem sjöng?' : byArtist ? 'Vem sjunger?' : 'Gissa med: vem sjunger?'}
-          selected={ownChoice}
-          answer={result ? (result.answer ?? null) : null}
-          onSelect={
-            canPick
-              ? setPick
-              : !myTurn && game.phase === 'placing'
-                ? (i) => void guessArtist(code, me.uid, game.turnIndex, i).catch((err) => setError(errorMessage(err)))
-                : undefined
-          }
-        />
-      )}
+      <FamilyRound
+        code={code}
+        game={game}
+        me={me}
+        myTurn={myTurn}
+        byArtist={byArtist}
+        pick={move.data?.choice ?? pick}
+        onPick={canPick ? setPick : undefined}
+      />
 
       {/* Med alternativen ovanför behöver tidslinjen alltid en rubrik, annars ser första kortet ut som ett alternativ. */}
       {(showChoices || (shown.uid !== me.uid && shown.uid !== game.currentTeamUid)) && (

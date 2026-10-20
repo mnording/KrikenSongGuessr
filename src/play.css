@@ -537,8 +537,9 @@
 
 .choice {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 6px 14px;
   width: 100%;
   min-height: 56px;
   padding: 6px 14px;
@@ -566,8 +567,9 @@
   line-height: 1;
 }
 
+/* Långa namn skjuter etiketten till en egen rad i stället för att klämmas. */
 .choice-name {
-  flex: 1;
+  flex: 1 1 9rem;
   min-width: 0;
   padding-left: 14px;
   border-left: 2px dashed #c9cbd6;
@@ -596,11 +598,13 @@
 
 .choice-tag {
   flex: none;
+  margin-left: auto;
   padding: 2px 8px;
   border-radius: 4px;
   background: var(--ink);
   color: var(--paper);
-  font-size: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 /* Hur det gick för laget som gissade med. */
@@ -619,6 +623,11 @@
 
 .guess-result .mascot-pin {
   width: 44px;
+}
+
+/* Nivåkorten i spelarvärlden: kanten tonas från nattens text, inte från spelledarens slate. */
+.fest .level-option {
+  border-color: rgb(185 179 214 / 0.35);
 }
 
 .fest .level-option.selected {

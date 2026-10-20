@@ -728,15 +728,15 @@ label {
   margin: 1.5rem 0;
 }
 
-/* Spelläget i lobbyn, med samma kort som nivåvalet. */
-.setting.modes {
+/* Spelläget i lobbyn, med samma kort som nivåvalet men i en kolumn. */
+.modes {
   display: grid;
   gap: 0.6rem;
   border: none;
   padding: 0;
 }
 
-.setting.modes legend {
+.modes legend {
   font-weight: 600;
   margin-bottom: 0.35rem;
 }

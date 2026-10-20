@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { leaders } from '../engine/game';
-import { isOnline, type Team } from '../game/types';
+import { gameMode, isOnline, teamLevel, type GameDoc, type Team } from '../game/types';
 import { getMascot } from '../game/mascots';
 import { MascotPin } from './Mascot';
 
@@ -17,6 +17,12 @@ export function TeamName({ team, now }: { team: Team; now?: number }) {
       {!online && <span className="badge muted">offline</span>}
     </span>
   );
+}
+
+/** Nivån som en kort etikett i spelledarens listor, bara i Familj-läget. */
+export function LevelBadge({ game, team }: { game: GameDoc; team: Team }) {
+  if (gameMode(game) !== 'family') return null;
+  return <span className="badge muted">{teamLevel(team) === 'easy' ? 'Lätt' : 'Svår'}</span>;
 }
 
 export function Scoreboard({ teams, target, winnerUids }: { teams: Team[]; target: number; winnerUids?: string[] }) {

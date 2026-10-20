@@ -56,6 +56,9 @@ service cloud.firestore {
                  .hasOnly(['name', 'color', 'mascot', 'level', 'connected', 'lastSeen', 'pendingSlot', 'guess'])
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['level'])
               || game(code).status == 'lobby')
+            // Gissningen ger inga kort, men ska inte gå att ändra efter att svaret visats.
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['guess'])
+              || game(code).phase == 'placing')
             && validProfile(request.resource.data));
 
         // Spelledaren tar bort lag, och ett lag får lämna i lobbyn.
@@ -106,6 +109,7 @@ service cloud.firestore {
     }
 
     // Ett drag är antingen en lucka i tidslinjen eller ett av fyra artistalternativ, aldrig båda.
+    // Att draget passar lagets nivå kollar spelledaren: fel sorts drag räknas som fel svar.
     function validMove(data) {
       return ('slotIndex' in data
           && !('choice' in data)

@@ -52,7 +52,7 @@ Spotify-sökningen väljer en ren version (utan svordomar) när det finns en lik
 Spelledaren väljer läge i lobbyn (`settings.mode` på spelet, saknas det gäller tidslinje).
 
 - **Tidslinje:** som från början.
-- **Familj:** varje lag väljer nivå när det går med (`level` på laget, går bara att byta i lobbyn). Ett lätt lag väljer artist bland fyra (`choices` på spelet, `choice` i draget) och får kortet i årsordning om det är rätt. Ett svårt lag lägger i tidslinjen. Övriga lag gissar med (`guess` på laget), vilket inte ger några kort. Alternativen väljs i `src/engine/artist.ts`.
+- **Familj:** varje lag väljer nivå när det går med (`level` på laget, går bara att byta i lobbyn). Ett lätt lag väljer artist bland fyra (`choices` på spelet, `choice` i draget) och får kortet i årsordning om det är rätt. Ett svårt lag lägger i tidslinjen. Övriga lag gissar med (`guess` på laget, bara medan turen pågår), vilket inte ger några kort. Nivån sparas även i tidslinjeläget men används inte där, så att spelledaren kan byta läge i lobbyn utan att lagen behöver gå med igen. Lag som gick med före bytet är svåra tills de väljer nivå i lobbyn. Alternativen väljs i `src/engine/artist.ts`.
 
 ## Avvikelser från projektbriefen
 

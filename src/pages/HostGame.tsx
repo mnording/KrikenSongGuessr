@@ -1,7 +1,8 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { ErrorText, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
+import { ChoiceCards } from '../components/ChoiceCards';
+import { ErrorText, LevelBadge, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
 import { Timeline } from '../components/Timeline';
 import { MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
@@ -19,18 +20,8 @@ import {
   startGame,
 } from '../game/hostActions';
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
-import { gameMode, teamLevel, type GameDoc, type GameMode, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
-
-const MODES: { value: GameMode; name: string; text: string }[] = [
-  { value: 'timeline', name: 'Tidslinje', text: 'Alla lägger låten rätt i tidslinjen efter år.' },
-  { value: 'family', name: 'Familj', text: 'Varje lag väljer nivå: lätt gissar artist bland fyra, svår lägger i tidslinjen. Alla får gissa med.' },
-];
-
-/** Nivån som en kort etikett i spelledarens listor, bara i Familj-läget. */
-function LevelBadge({ game, team }: { game: GameDoc; team: Team }) {
-  if (gameMode(game) !== 'family') return null;
-  return <span className="badge muted">{teamLevel(team) === 'easy' ? 'Lätt' : 'Svår'}</span>;
-}
+import { MODES } from '../game/modes';
+import { gameMode, teamLevel, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
 import { albumArt, loadSongs, resolveUri } from '../spotify/catalog';
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
@@ -251,6 +242,7 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
   const target = game.settings.targetLength;
   const tooFew = teams.length < MIN_TEAMS;
   const tooMany = teams.length > MAX_TEAMS;
+  const [modeError, setModeError] = useState<string | null>(null);
 
   return (
     <>
@@ -282,22 +274,20 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
         ))}
       </ul>
 
-      <fieldset className="setting modes">
-        <legend>Spelläge</legend>
-        {MODES.map((m) => (
-          <label key={m.value} className={`level-option${gameMode(game) === m.value ? ' selected' : ''}`}>
-            <input
-              type="radio"
-              name="mode"
-              value={m.value}
-              checked={gameMode(game) === m.value}
-              onChange={() => void setMode(code, m.value)}
-            />
-            <strong>{m.name}</strong>
-            <span>{m.text}</span>
-          </label>
-        ))}
-      </fieldset>
+      <div className="setting">
+        <ChoiceCards
+          legend="Spelläge"
+          name="mode"
+          className="modes"
+          options={MODES}
+          value={gameMode(game)}
+          onChange={(mode) => {
+            setModeError(null);
+            setMode(code, mode).catch((err) => setModeError(`Kunde inte byta läge: ${errorMessage(err)}`));
+          }}
+        />
+        <ErrorText error={modeError} />
+      </div>
 
       <div className="setting">
         <label htmlFor="target">Kort för att vinna (inklusive startkortet)</label>

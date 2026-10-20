@@ -1,6 +1,6 @@
 // Låtlistan och hur den kopplas till Spotify-URI:er.
 // songs.json kan sakna URI. Då söker spelledarens telefon fram spåret och sparar svaret lokalt.
-import { normalizeName } from '../engine/artist';
+import { normalizeName as normalize } from '../engine/artist';
 import type { Song } from '../engine/game';
 import { spotifyFetch } from './auth';
 
@@ -46,8 +46,6 @@ function pickImage(images: SpotifyImage[] | undefined): string | null {
   if (!images?.length) return null;
   return (images.find((i) => (i.width ?? 0) <= 300) ?? images[images.length - 1]).url;
 }
-
-const normalize = normalizeName;
 
 export async function searchTracks(query: string, limit = 5): Promise<SearchTrack[]> {
   const params = new URLSearchParams({ q: query, type: 'track', limit: String(limit), market: 'from_token' });

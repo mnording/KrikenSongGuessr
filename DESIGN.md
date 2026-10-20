@@ -330,8 +330,8 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 Four artists for the turn, in `src/components/ArtistChoices.tsx`.
 - **Style:** full-width Ticket Paper slabs, 56px minimum, 6px rounding, no notches. A letter A–D in the display face sits left of a dashed tear line, so kids can shout "B!"; the artist name is Body Strong.
 - **Who sees them:** the Lätt team whose turn it is picks and then locks with the docked LÅS ("Välj en artist" until something is picked). Every other team gets the same list headed "Gissa med: vem sjunger?" and can change its guess until the reveal. A Svår team doesn't see them on its own turn.
-- **Picked:** a 3px Acid Lime outline at 2px offset.
-- **Revealed:** the right artist fills Acid Lime with an ink "Rätt svar" tag, like a just-won stub; a wrong pick gets a Miss Print strike-through and an "Ert val" tag. A side guess also gets one line with the team's mascot, happy or sad.
+- **Picked:** a 3px Acid Lime outline at 2px offset. A side guess also gets a status line under the list ("Ni gissar på B. Ni kan ändra tills svaret visas."), and a failed guess shows its error right there.
+- **Revealed:** the right artist fills Acid Lime with an ink "Rätt svar" tag (0.85rem, 800; a long name pushes the tag to its own line), like a just-won stub; a wrong pick gets a Miss Print strike-through and an "Ert val" tag. A side guess also gets one line with the team's mascot, happy or sad.
 - **Heading:** with choices on screen the timeline below always gets its own heading ("Er tidslinje"), so its first stub can't be mistaken for a fifth option.
 
 ### Buttons
@@ -350,7 +350,7 @@ Four artists for the turn, in `src/components/ArtistChoices.tsx`.
 - **Turn banner and result:** the current team's turn banner fills with that team's colour (contrast-chosen text, 1.35rem, 800); the reveal result panel fills Host Correct or Host Wrong with a short pop-in.
 - **Timeline (host):** slate-surface cards with a 6px team-colour left edge and a 1.5rem 800 year; slots are 2px dashed slate-border boxes.
 - **Mascot picker (Join, and the lobby editor):** five-column grid of mascot pins; the selected one jumps and gets a ring, mascots other teams hold are dimmed and can't be picked, and the chosen mascot's name and backstory sit under the grid.
-- **Level and mode cards (Familj):** two bordered cards (3px border, 14px rounding) with a bold name and a muted one-line explanation; the selected card's border turns text-colour. Teams pick Lätt or Svår in the join form when the game is in Familj; the host picks the mode with the same cards in the lobby. The host's team lists show the level as a small badge.
+- **Level and mode cards (Familj):** two bordered cards (3px border, 14px rounding) with a bold name and a muted one-line explanation; the selected card's border turns text-colour. Teams pick Lätt or Svår in the join form when the game is in Familj, and the player lobby shows the same two cards directly (not behind Ändra), so teams that joined before the host switched mode can still choose. On the night ground the unselected border is Night Muted at 35%. The host picks the mode with the same cards, in one column, in the lobby. The host's team lists show the level as a small badge.
 
 ## Do's and Don'ts
 

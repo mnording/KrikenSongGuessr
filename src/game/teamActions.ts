@@ -4,17 +4,18 @@ import { getMascot, type MascotId } from './mascots';
 import { moveRef, teamRef } from './refs';
 import type { TeamLevel } from './types';
 
-// Laget väljer maskot, färgen följer med den. Nivån gäller bara i Familj-läget.
-const profile = (name: string, mascot: MascotId, level: TeamLevel) => ({
+// Laget väljer maskot, färgen följer med den.
+const profile = (name: string, mascot: MascotId) => ({
   name: name.trim().slice(0, 24),
   mascot,
   color: getMascot(mascot)!.color,
-  level,
 });
 
 export async function joinGame(code: string, uid: string, name: string, mascot: MascotId, level: TeamLevel = 'hard') {
   await setDoc(teamRef(code, uid), {
-    ...profile(name, mascot, level),
+    ...profile(name, mascot),
+    // Nivån gäller bara i Familj-läget, men sparas alltid så att spelledaren kan byta läge i lobbyn.
+    level,
     connected: true,
     lastSeen: serverTimestamp(),
     joinedAt: serverTimestamp(),
@@ -22,8 +23,13 @@ export async function joinGame(code: string, uid: string, name: string, mascot: 
   });
 }
 
-export async function updateProfile(code: string, uid: string, name: string, mascot: MascotId, level: TeamLevel) {
-  await updateDoc(teamRef(code, uid), profile(name, mascot, level));
+export async function updateProfile(code: string, uid: string, name: string, mascot: MascotId) {
+  await updateDoc(teamRef(code, uid), profile(name, mascot));
+}
+
+/** Bara i lobbyn. */
+export async function setLevel(code: string, uid: string, level: TeamLevel) {
+  await updateDoc(teamRef(code, uid), { level });
 }
 
 export async function leaveGame(code: string, uid: string) {

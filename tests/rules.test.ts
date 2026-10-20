@@ -192,6 +192,8 @@ describe('teams', () => {
     await assertSucceeds(updateDoc(ref, { guess: null }));
     await assertFails(updateDoc(ref, { guess: { turnIndex: 4, choice: 4 } }));
     await assertFails(updateDoc(ref, { guess: { turnIndex: 4, choice: 1, rätt: true } }));
+    await seed({ status: 'playing', phase: 'revealed' }, ['t1']);
+    await assertFails(updateDoc(ref, { guess: { turnIndex: 4, choice: 1 } }));
   });
 
   it('låter spelledaren skriva tidslinje och ta bort lag', async () => {
