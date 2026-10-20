@@ -32,7 +32,9 @@ export type GameDoc = {
 
 export type TeamDoc = {
   name: string;
+  /** Följer maskoten. Lag från före maskotarna har bara färgen. */
   color: string;
+  mascot?: string;
   connected: boolean;
   lastSeen?: Timestamp | null;
   joinedAt?: Timestamp | null;
@@ -55,19 +57,6 @@ export type PrivateState = {
   currentCard: Song | null;
   spotifyDeviceId: string | null;
 };
-
-export const TEAM_COLORS = [
-  { value: '#e11d48', name: 'Röd' },
-  { value: '#f97316', name: 'Orange' },
-  { value: '#eab308', name: 'Gul' },
-  { value: '#22c55e', name: 'Grön' },
-  { value: '#14b8a6', name: 'Turkos' },
-  { value: '#3b82f6', name: 'Blå' },
-  { value: '#8b5cf6', name: 'Lila' },
-  { value: '#ec4899', name: 'Rosa' },
-  { value: '#a16207', name: 'Brun' },
-  { value: '#64748b', name: 'Grå' },
-];
 
 export const OFFLINE_AFTER_MS = 30_000;
 export const HEARTBEAT_MS = 10_000;

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import '../play.css';
 import { Link, Navigate, useParams } from 'react-router';
 import { ErrorText, Loading, Screen } from '../components/Common';
+import { MascotPin } from '../components/Mascot';
 import { ProfileForm } from '../components/ProfileForm';
 import { TicketTimeline } from '../components/TicketTimeline';
 import { MAX_TEAMS } from '../engine/game';
@@ -9,6 +10,7 @@ import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
 import { leaveGame, lockMove, selectSlot, updateProfile } from '../game/teamActions';
+import { getMascot, MASCOTS, type MascotMood } from '../game/mascots';
 import { isOnline, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -50,7 +52,14 @@ export default function Play() {
     const byScore = [...sortedTeams].sort((a, b) => (b.timeline?.length ?? 0) - (a.timeline?.length ?? 0));
     return (
       <FestPage>
-        <Wristband color={bandTeam?.color} mine={bandTeam?.uid === me.uid} big={winnerTitle(game.data, teams.data, me.uid)} sub="Spelet är slut" />
+        <Wristband
+          color={bandTeam?.color}
+          mascot={bandTeam?.mascot}
+          mood="happy"
+          mine={bandTeam?.uid === me.uid}
+          big={winnerTitle(game.data, teams.data, me.uid)}
+          sub="Spelet är slut"
+        />
         <Bands teams={byScore} winnerUids={game.data.winnerUids} />
         <p className="hint">Spelledaren kan starta en ny omgång.</p>
         <h2>Er tidslinje</h2>
@@ -78,17 +87,21 @@ function FestPage({ children }: { children: ReactNode }) {
   );
 }
 
-/** Armbandet överst: vems skärm det är just nu. Spelas in på nytt när innehållet byts. */
-function Wristband({ color, big, sub, mine = false }: { color?: string; big: ReactNode; sub?: ReactNode; mine?: boolean }) {
+type WristbandProps = { color?: string; mascot?: string; mood?: MascotMood; big: ReactNode; sub?: ReactNode; mine?: boolean };
+
+/** Armbandet överst: vems skärm det är just nu. Spelas in på nytt när innehållet byts. Maskoten sitter där knappen satt. */
+function Wristband({ color, mascot, mood = 'idle', big, sub, mine = false }: WristbandProps) {
+  const pinned = Boolean(getMascot(mascot));
   return (
     <header
-      key={`${color}-${typeof big === 'string' ? big : ''}`}
-      className={`wristband${mine ? ' mine' : ''}`}
+      key={`${color}-${mascot}-${mood}-${typeof big === 'string' ? big : ''}`}
+      className={`wristband${mine ? ' mine' : ''}${pinned ? ' pinned' : ''}`}
       style={color ? { backgroundColor: color, color: textOn(color) } : undefined}
       role="status"
     >
       <h1 className="wristband-big">{big}</h1>
       {sub && <div className="wristband-sub">{sub}</div>}
+      {pinned && <MascotPin mascot={mascot} mood={mood} animate className="wristband-pin" />}
     </header>
   );
 }
@@ -112,6 +125,8 @@ function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = []
         const style = { backgroundColor: t.color, color: textOn(t.color) };
         const content = (
           <>
+            {/* Under spelet behöver namnet och räknaren hela bredden. */}
+            {!showCount && <MascotPin mascot={t.mascot} />}
             <span className="band-name">
               {t.name}
               {offline && <span className="band-off">offline</span>}
@@ -172,6 +187,8 @@ function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
     <FestPage>
       <Wristband
         color={me.color}
+        mascot={me.mascot}
+        mood="happy"
         mine
         big="Ni är med!"
         sub={
@@ -186,11 +203,11 @@ function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
       {editing && (
         <ProfileForm
           initialName={me.name}
-          initialColor={me.color}
-          takenColors={teams.filter((t) => t.uid !== me.uid).map((t) => t.color)}
+          initialMascot={getMascot(me.mascot)?.id ?? MASCOTS.find((m) => m.color === me.color)?.id}
+          takenMascots={teams.filter((t) => t.uid !== me.uid).flatMap((t) => (t.mascot ? [t.mascot] : []))}
           submitLabel="Spara"
-          onSubmit={(name, color) => {
-            updateProfile(code, me.uid, name, color)
+          onSubmit={(name, mascot) => {
+            updateProfile(code, me.uid, name, mascot)
               .then(() => setEditing(false))
               .catch((err) => setError(errorMessage(err)));
           }}
@@ -266,17 +283,24 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       {result ? (
         <Wristband
           color={resultTeam?.color}
+          mascot={resultTeam?.mascot}
+          mood={result.correct ? 'happy' : 'sad'}
           mine={resultMine}
           big={result.correct ? 'Rätt!' : 'Fel!'}
           sub={`${resultMine ? 'Ni' : (resultTeam?.name ?? 'Laget')} ${result.correct ? 'fick kortet' : 'missade'}`}
         />
       ) : myTurn ? (
-        <Wristband color={me.color} mine big="Er tur!" sub={me.name} />
+        <Wristband color={me.color} mascot={me.mascot} mine big="Er tur!" sub={me.name} />
       ) : (
-        <Wristband color={current?.color} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
+        <Wristband color={current?.color} mascot={current?.mascot} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
       )}
 
-      <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} />
+      <Bands
+        teams={teams}
+        now={now}
+        shownUid={shown.uid}
+        onShow={setViewUid}
+      />
 
       {result && !(result.correct && result.teamUid === shown.uid) && (
         <div className="reveal">

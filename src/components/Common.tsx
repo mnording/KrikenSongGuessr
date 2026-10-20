@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { leaders } from '../engine/game';
 import { isOnline, type Team } from '../game/types';
+import { getMascot } from '../game/mascots';
+import { MascotPin } from './Mascot';
 
 export function TeamDot({ color }: { color: string }) {
   return <span className="team-dot" style={{ background: color }} aria-hidden="true" />;
@@ -10,7 +12,7 @@ export function TeamName({ team, now }: { team: Team; now?: number }) {
   const online = now === undefined || isOnline(team, now);
   return (
     <span className="team-name">
-      <TeamDot color={team.color} />
+      {getMascot(team.mascot) ? <MascotPin mascot={team.mascot} /> : <TeamDot color={team.color} />}
       {team.name}
       {!online && <span className="badge muted">offline</span>}
     </span>

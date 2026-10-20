@@ -71,6 +71,30 @@
   box-shadow: inset 0 0 0 6px rgb(23 18 46 / 0.12);
 }
 
+/* Med maskot sitter maskoten på en pappersknapp i knappens ställe. Vårt eget armband har korta
+   rubriker och får en stor maskot; andra lags namn är långa och behåller knappens bredd. */
+.wristband.pinned::after {
+  display: none;
+}
+
+.wristband-pin {
+  position: absolute;
+  right: 8px;
+  bottom: 14px;
+  width: 60px;
+  box-shadow: inset 0 0 0 4px rgb(23 18 46 / 0.12);
+}
+
+.wristband.mine.pinned {
+  padding-right: 116px;
+}
+
+.wristband.mine .wristband-pin {
+  right: 14px;
+  width: 88px;
+  box-shadow: inset 0 0 0 5px rgb(23 18 46 / 0.12);
+}
+
 .wristband-big {
   margin: 0;
   font-family: var(--display);
@@ -179,6 +203,27 @@
 
 .band.shown {
   outline-color: var(--fest-text);
+}
+
+/* Maskoten först i bandet i lobbyn. I tre kolumner får namnet platsen i stället. */
+.band:has(.mascot-pin) {
+  padding-left: 5px;
+}
+
+.band .mascot-pin {
+  width: 30px;
+}
+
+.band .band-name {
+  flex: 1;
+}
+
+.bands:not(.few) .band .mascot-pin {
+  display: none;
+}
+
+.bands:not(.few) .band:has(.mascot-pin) {
+  padding-left: 10px;
 }
 
 /* Offline: namnet ska fortfarande gå att läsa, bara räknaren bleknar. */
@@ -455,6 +500,20 @@
 
 .fest .card-box {
   background: var(--night-2);
+}
+
+.fest .mascot-option.selected .mascot-pin {
+  box-shadow:
+    0 0 0 3px var(--night-2),
+    0 0 0 6px var(--fest-text);
+}
+
+.fest .mascot-option input:focus-visible + .mascot-pin {
+  outline-color: var(--act);
+}
+
+.fest :is(.mascot-intro p, .mascot-taken) {
+  color: var(--fest-muted);
 }
 
 .fest input {

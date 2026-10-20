@@ -1,11 +1,18 @@
 // Det ett lag får skriva: sin egen lagprofil och sina drag.
 import { deleteDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { getMascot, type MascotId } from './mascots';
 import { moveRef, teamRef } from './refs';
 
-export async function joinGame(code: string, uid: string, name: string, color: string) {
+// Laget väljer maskot, färgen följer med den.
+const profile = (name: string, mascot: MascotId) => ({
+  name: name.trim().slice(0, 24),
+  mascot,
+  color: getMascot(mascot)!.color,
+});
+
+export async function joinGame(code: string, uid: string, name: string, mascot: MascotId) {
   await setDoc(teamRef(code, uid), {
-    name: name.trim().slice(0, 24),
-    color,
+    ...profile(name, mascot),
     connected: true,
     lastSeen: serverTimestamp(),
     joinedAt: serverTimestamp(),
@@ -13,8 +20,8 @@ export async function joinGame(code: string, uid: string, name: string, color: s
   });
 }
 
-export async function updateProfile(code: string, uid: string, name: string, color: string) {
-  await updateDoc(teamRef(code, uid), { name: name.trim().slice(0, 24), color });
+export async function updateProfile(code: string, uid: string, name: string, mascot: MascotId) {
+  await updateDoc(teamRef(code, uid), profile(name, mascot));
 }
 
 export async function leaveGame(code: string, uid: string) {

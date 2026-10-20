@@ -11,7 +11,7 @@ web
 The Kriken crew, a private friend group, playing together in one room on a game night. Two roles:
 
 - **Spelledare (host):** one person with Spotify Premium who runs the game from their phone. That phone plays the music into a speaker, starts the turns, reveals the answers and moves the game along.
-- **Lag (teams):** 2–10 teams of friends, each playing from one of their own phones with no account. They join with a 6-digit code or a QR code, pick a team name and colour, listen, and place the song in their timeline.
+- **Lag (teams):** 2–10 teams of friends, each playing from one of their own phones with no account. They join with a 6-digit code or a QR code, pick a team name and a mascot (which brings the team colour), listen, and place the song in their timeline.
 
 The game is not intended for anyone outside the group. Future Kriken game nights may reuse it.
 
@@ -34,7 +34,7 @@ The crew's own game. It is named for the group, it uses a song list the group ch
 
 ## Capabilities and Constraints
 
-- Routes: `/` (join with a code or create a game), `/host` (Spotify login, create or continue), `/host/:code` (lobby with QR, turns, music, reveal, results), `/host/songs` (match songs to Spotify, preview, export JSON), `/join/:code` (team name and colour), `/play/:code` (lobby, timeline, place and lock).
+- Routes: `/` (join with a code or create a game), `/host` (Spotify login, create or continue), `/host/:code` (lobby with QR, turns, music, reveal, results), `/host/songs` (match songs to Spotify, preview, export JSON), `/join/:code` (team name and mascot), `/play/:code` (lobby, timeline, place and lock).
 - Stack: React 19, Vite, TypeScript, React Router, Firebase (Firestore with anonymous auth, Hosting), Spotify Web Playback SDK with PKCE. Live at https://krikensongguessr.web.app.
 - The host needs Spotify Premium. Teams need nothing.
 - Song list: `src/data/songs.json`, 65 songs with title, artist and original year, spanning from 1964 onwards.

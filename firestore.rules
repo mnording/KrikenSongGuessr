@@ -44,15 +44,15 @@ service cloud.firestore {
           && uid == request.auth.uid
           && game(code).status == 'lobby'
           && game(code).hostUid != request.auth.uid
-          && request.resource.data.keys().hasOnly(['name', 'color', 'connected', 'lastSeen', 'joinedAt', 'pendingSlot'])
+          && request.resource.data.keys().hasOnly(['name', 'color', 'mascot', 'connected', 'lastSeen', 'joinedAt', 'pendingSlot'])
           && validProfile(request.resource.data);
 
-        // Laget ändrar namn, färg, närvaro och vald lucka. Spelledaren skriver tidslinjen.
+        // Laget ändrar namn, maskot, färg, närvaro och vald lucka. Spelledaren skriver tidslinjen.
         allow update: if isHost(code)
           || (signedIn()
             && uid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['name', 'color', 'connected', 'lastSeen', 'pendingSlot'])
+                 .hasOnly(['name', 'color', 'mascot', 'connected', 'lastSeen', 'pendingSlot'])
             && validProfile(request.resource.data));
 
         // Spelledaren tar bort lag, och ett lag får lämna i lobbyn.
@@ -91,7 +91,9 @@ service cloud.firestore {
         && data.name.size() >= 1
         && data.name.size() <= 24
         && data.color is string
-        && data.color.size() <= 16;
+        && data.color.size() <= 16
+        // Maskoten är frivillig så att lag från före maskotarna fortfarande går att uppdatera.
+        && (!('mascot' in data) || data.mascot in ['kalle', 'rickard', 'kicki', 'gunnar', 'bluesy', 'wilma', 'elvira', 'frasse', 'bosse', 'ulla']);
     }
   }
 }

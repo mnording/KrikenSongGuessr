@@ -7,6 +7,7 @@ import { useDoc } from '../hooks/firestore';
 import { useUser } from '../hooks/misc';
 import { gameRef, teamRef } from '../game/refs';
 import { joinGame } from '../game/teamActions';
+import type { MascotId } from '../game/mascots';
 import type { GameDoc } from '../game/types';
 import { errorMessage } from '../util';
 
@@ -57,11 +58,11 @@ export default function Join() {
     );
   }
 
-  const submit = async (name: string, color: string) => {
+  const submit = async (name: string, mascot: MascotId) => {
     setBusy(true);
     setError(null);
     try {
-      await joinGame(code, user.uid, name, color);
+      await joinGame(code, user.uid, name, mascot);
       navigate(`/play/${code}`, { replace: true });
     } catch (err) {
       setError(`Kunde inte gå med: ${errorMessage(err)}`);

@@ -13,6 +13,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
+import { MASCOT_IDS } from '../src/game/mascots';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const PROJECT = 'demo-krikensongguessr';
@@ -80,7 +81,7 @@ beforeEach(async () => {
   await fetch(docsUrl.replace('/v1/', '/emulator/v1/'), { method: 'DELETE' });
 });
 
-const team = (name = 'Lag') => ({ name, color: '#e11d48', connected: true, lastSeen: 1, joinedAt: 1 });
+const team = (name = 'Lag') => ({ name, color: '#e11d48', mascot: 'kalle', connected: true, lastSeen: 1, joinedAt: 1 });
 
 async function seed(game: Record<string, Value>, teams: string[] = []) {
   await adminSet(`games/${CODE}`, {
@@ -154,6 +155,22 @@ describe('teams', () => {
     await assertSucceeds(updateDoc(ref, { name: 'Nytt namn', lastSeen: 2, connected: false, pendingSlot: 1 }));
     await assertFails(updateDoc(ref, { timeline: [{ year: 1999 }] }));
     await assertFails(updateDoc(doc(db('t2'), 'games', CODE, 'teams', 't1'), { name: 'Kapat' }));
+  });
+
+  it('godtar bara kända maskotar, och lag utan maskot', async () => {
+    await seed({});
+    const ref = doc(db('t1'), 'games', CODE, 'teams', 't1');
+    await assertFails(setDoc(ref, { ...team(), mascot: 'okänd' }));
+    const old: Record<string, unknown> = team();
+    delete old.mascot;
+    await assertSucceeds(setDoc(ref, old));
+    await assertSucceeds(updateDoc(ref, { mascot: 'ulla', color: '#64748b' }));
+    await assertFails(updateDoc(ref, { mascot: 'Ulla' }));
+  });
+
+  it('har samma maskotlista som appen', () => {
+    const list = readFileSync('firestore.rules', 'utf8').match(/data\.mascot in \[([^\]]+)\]/)?.[1] ?? '';
+    expect(list.split(',').map((s) => s.trim().replace(/'/g, ''))).toEqual([...MASCOT_IDS]);
   });
 
   it('låter spelledaren skriva tidslinje och ta bort lag', async () => {

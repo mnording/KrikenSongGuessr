@@ -1,24 +1,26 @@
 import { useState, type FormEvent } from 'react';
-import { TEAM_COLORS } from '../game/types';
+import { getMascot, MASCOTS, type MascotId } from '../game/mascots';
+import { MascotPin } from './Mascot';
 
 type Props = {
   initialName?: string;
-  initialColor?: string;
-  takenColors?: string[];
+  initialMascot?: MascotId;
+  takenMascots?: string[];
   submitLabel: string;
   busy?: boolean;
-  onSubmit: (name: string, color: string) => void;
+  onSubmit: (name: string, mascot: MascotId) => void;
 };
 
-export function ProfileForm({ initialName = '', initialColor, takenColors = [], submitLabel, busy, onSubmit }: Props) {
-  const firstFree = TEAM_COLORS.find((c) => !takenColors.includes(c.value))?.value ?? TEAM_COLORS[0].value;
+export function ProfileForm({ initialName = '', initialMascot, takenMascots = [], submitLabel, busy, onSubmit }: Props) {
+  const firstFree = MASCOTS.find((m) => !takenMascots.includes(m.id))?.id ?? MASCOTS[0].id;
   const [name, setName] = useState(initialName);
-  const [color, setColor] = useState(initialColor ?? firstFree);
+  const [mascot, setMascot] = useState<MascotId>(initialMascot ?? firstFree);
+  const chosen = getMascot(mascot)!;
   const valid = name.trim().length >= 1;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (valid && !busy) onSubmit(name, color);
+    if (valid && !busy) onSubmit(name, mascot);
   };
 
   return (
@@ -32,30 +34,28 @@ export function ProfileForm({ initialName = '', initialColor, takenColors = [], 
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <fieldset className="colors">
-        <legend>Färg</legend>
-        {TEAM_COLORS.map((c) => {
-          const taken = takenColors.includes(c.value) && c.value !== initialColor;
+      <fieldset className="mascots" aria-describedby="mascot-intro">
+        <legend>Maskot</legend>
+        {MASCOTS.map((m) => {
+          const taken = takenMascots.includes(m.id) && m.id !== initialMascot;
+          const selected = mascot === m.id;
           return (
-            <label key={c.value} className={`color-option${color === c.value ? ' selected' : ''}`} title={c.name}>
-              <input
-                type="radio"
-                name="color"
-                value={c.value}
-                checked={color === c.value}
-                onChange={() => setColor(c.value)}
-              />
-              <span className="swatch" style={{ background: c.value }} aria-hidden="true">
-                {taken ? '•' : ''}
-              </span>
+            <label key={m.id} className={`mascot-option${selected ? ' selected' : ''}${taken ? ' taken' : ''}`} title={m.name}>
+              <input type="radio" name="mascot" value={m.id} checked={selected} onChange={() => setMascot(m.id)} />
+              <MascotPin mascot={m.id} mood={selected ? 'happy' : 'idle'} animate={selected} />
               <span className="visually-hidden">
-                {c.name}
+                {m.name}
                 {taken ? ' (tagen)' : ''}
               </span>
             </label>
           );
         })}
       </fieldset>
+      <div id="mascot-intro" className="mascot-intro" aria-live="polite">
+        <strong>{chosen.name}</strong>
+        {takenMascots.includes(chosen.id) && chosen.id !== initialMascot && <span className="mascot-taken"> · ett annat lag har den</span>}
+        <p>{chosen.backstory}</p>
+      </div>
       <button type="submit" className="primary" disabled={!valid || busy}>
         {submitLabel}
       </button>

@@ -18,6 +18,9 @@ const { createGame, nextTurn, reveal, startGame, playAgain } = await import('../
 const { joinGame, lockMove } = await import('../src/game/teamActions');
 const { gameRef, moveRef, privateRef, teamsRef } = await import('../src/game/refs');
 
+// Testerna når inte Spotify, så korten får inga omslag.
+const noArt = async () => null;
+
 const PROJECT = 'demo-krikensongguessr';
 const store = new Map<string, string>();
 vi.stubGlobal('localStorage', {
@@ -76,18 +79,18 @@ describe('ett helt spel', () => {
 
     for (const [uid, name] of [['lagA', 'Lag A'], ['lagB', 'Lag B'], ['lagC', 'Lag C']]) {
       as(uid);
-      await joinGame(code, uid, name, '#e11d48');
+      await joinGame(code, uid, name, 'kalle');
     }
 
     let { game, teams } = await hostSnapshot(code);
-    await startGame(code, game, teams, songs);
+    await startGame(code, game, teams, songs, noArt);
     ({ game, teams } = await hostSnapshot(code));
     expect(game.status).toBe('playing');
     for (const t of teams) expect(t.timeline).toHaveLength(1);
 
     // Ett lag kan inte gå med efter start.
     as('sen');
-    await expect(joinGame(code, 'sen', 'Sena laget', '#000000')).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(joinGame(code, 'sen', 'Sena laget', 'ulla')).rejects.toMatchObject({ code: 'permission-denied' });
 
     let turns = 0;
     for (;;) {
@@ -114,7 +117,7 @@ describe('ett helt spel', () => {
 
       as('host');
       const move = (await getDoc(moveRef(code, snap.game.turnIndex))).data() as MoveDoc;
-      await reveal(code, snap.game, team, move, card);
+      await reveal(code, snap.game, team, move, card, noArt);
 
       const after = await hostSnapshot(code);
       expect(after.game.phase).toBe('revealed');

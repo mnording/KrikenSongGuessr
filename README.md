@@ -30,7 +30,7 @@ Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 | `/host` | Spelledare | Spotify-inloggning, skapa eller fortsätt spel |
 | `/host/:code` | Spelledare | Lobby med QR, turer, musik, avslöja, resultat |
 | `/host/songs` | Spelledare | Koppla låtar till Spotify, provspela, exportera JSON |
-| `/join/:code` | Lag | Lagnamn och färg |
+| `/join/:code` | Lag | Lagnamn och maskot |
 | `/play/:code` | Lag | Lobby, tidslinje, placera och lås |
 
 ## Struktur
