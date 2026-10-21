@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import songs from '../data/songs.json';
 import type { Song } from './game';
-import { decadeOf, decadesIn, filterSongs, SONG_TAGS, songsNeeded } from './library';
+import { decadeOf, decadesIn, filterSongs, hasEnoughSongs, SONG_TAGS, songsNeeded } from './library';
 
 const list = songs as Song[];
 const song = (year: number, tags?: Song['tags']): Song => ({ id: `s${year}${tags?.join('')}`, spotifyUri: '', title: 'T', artist: 'A', year, tags });
@@ -35,6 +35,11 @@ describe('urvalet', () => {
     expect(filterSongs(pool, { decades: [], tags: ['rock', 'dans'] }).map((s) => s.year)).toEqual([1965, 1985, 1987]);
     expect(filterSongs(pool, { decades: [1980], tags: ['rock'] }).map((s) => s.year)).toEqual([1985]);
     expect(filterSongs(pool, { decades: [1960], tags: ['svenskt'] })).toEqual([]);
+  });
+
+  it('kräver ett startkort per lag och minst ett kort till', () => {
+    expect(hasEnoughSongs(5, 4)).toBe(true);
+    expect(hasEnoughSongs(4, 4)).toBe(false);
   });
 
   it('uppskattar hur många låtar ett spel kan behöva', () => {

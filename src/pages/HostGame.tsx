@@ -7,7 +7,7 @@ import { ErrorText, LevelBadge, Loading, Scoreboard, Screen, TeamName } from '..
 import { TauntToasts } from '../components/Taunts';
 import { Timeline } from '../components/Timeline';
 import { MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
-import { filterSongs } from '../engine/library';
+import { filterSongs, hasEnoughSongs } from '../engine/library';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePlayer, useSpotifyLoggedIn, useUser, useWakeLock } from '../hooks/misc';
 import {
@@ -85,7 +85,7 @@ export default function HostGame() {
 type ViewProps = { code: string; game: GameDoc; teams: Team[]; state: PrivateState | null; songs: Song[] };
 
 function HostView({ code, game, teams, state, songs }: ViewProps) {
-  // Spelet drar bara ur spelledarens urval. Det går bara att ändra i lobbyn.
+  // Kortleken blandas ur spelledarens urval (bara i lobbyn). Familj-lägets artister tas ur hela listan.
   const playable = filterSongs(songs, game.settings.songFilter);
   const player = usePlayer();
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +129,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
   const advance = () =>
     act(async () => {
       if (!state) throw new Error('Kortleken saknas');
-      const card = await nextTurn(code, game, teams, state, playable);
+      const card = await nextTurn(code, game, teams, state, songs);
       if (card) await playCard(card, game.turnIndex + 1);
     });
 
@@ -156,7 +156,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
           playerReady={player.status === 'ready'}
           onStart={() =>
             act(async () => {
-              const card = await startGame(code, game, teams, playable, albumArt);
+              const card = await startGame(code, game, teams, songs, albumArt, playable);
               await playCard(card, game.turnIndex + 1);
             })
           }
@@ -251,7 +251,7 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
   const target = game.settings.targetLength;
   const tooFew = teams.length < MIN_TEAMS;
   const tooMany = teams.length > MAX_TEAMS;
-  const tooFewSongs = playable.length <= teams.length;
+  const tooFewSongs = !hasEnoughSongs(playable.length, teams.length);
   const [modeError, setModeError] = useState<string | null>(null);
 
   return (

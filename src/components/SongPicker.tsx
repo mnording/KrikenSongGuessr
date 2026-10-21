@@ -1,7 +1,7 @@
 // Spelledarens urval i lobbyn: vilka decennier och etiketter spelet drar låtar ur.
 import { useState } from 'react';
 import type { Song } from '../engine/game';
-import { decadesIn, SONG_TAGS, songsNeeded, type SongFilter, type SongTag } from '../engine/library';
+import { decadesIn, hasEnoughSongs, SONG_TAGS, songsNeeded, type SongFilter, type SongTag } from '../engine/library';
 import { setSongFilter } from '../game/hostActions';
 import type { GameDoc } from '../game/types';
 import { errorMessage } from '../util';
@@ -15,7 +15,8 @@ const TAG_NAMES: Record<SongTag, string> = {
   hiphop: 'Hiphop',
 };
 
-const decadeName = (decade: number) => `${String(decade).slice(2)}-tal`;
+/** 60-tal … 90-tal, men 2000-tal och 2010-tal så att de inte blandas ihop med 1900-talet. */
+const decadeName = (decade: number) => (decade >= 2000 ? `${decade}-tal` : `${String(decade).slice(2)}-tal`);
 
 type Props = {
   code: string;
@@ -28,10 +29,13 @@ type Props = {
 
 export function SongPicker({ code, game, songs, playable, teamCount }: Props) {
   const [error, setError] = useState<string | null>(null);
-  const filter: SongFilter = game.settings.songFilter ?? { decades: [], tags: [] };
+  // Valet visas direkt och sparas sedan. Spelledaren är ensam om att skriva, så två snabba tryck
+  // ska inte vänta på varandras svar från Firestore.
+  const [filter, setFilter] = useState<SongFilter>(game.settings.songFilter ?? { decades: [], tags: [] });
   const needed = songsNeeded(teamCount, game.settings.targetLength);
 
   const save = (next: SongFilter) => {
+    setFilter(next);
     setError(null);
     setSongFilter(code, next).catch((err) => setError(`Kunde inte spara urvalet: ${errorMessage(err)}`));
   };
@@ -67,19 +71,24 @@ export function SongPicker({ code, game, songs, playable, teamCount }: Props) {
           </button>
         ))}
       </div>
-      <p className="songs-count" role="status">
-        {playable.length === songs.length ? `Alla ${songs.length} låtar` : `${playable.length} av ${songs.length} låtar`}
-      </p>
-      {playable.length <= teamCount ? (
-        <p className="error">För få låtar för så många lag. Välj fler decennier eller etiketter.</p>
-      ) : (
-        playable.length < needed && (
-          <p className="muted small">
-            Kortleken kan ta slut: {teamCount} lag till {game.settings.targetLength} kort kan behöva runt {needed} låtar. Då
-            vinner laget med flest kort.
+      <div aria-live="polite">
+        <p className="songs-count">
+          {playable.length === songs.length ? `Alla ${songs.length} låtar` : `${playable.length} av ${songs.length} låtar`}
+        </p>
+        {!hasEnoughSongs(playable.length, teamCount) ? (
+          <p className="error">
+            Bara {playable.length} låtar för {teamCount} lag. Varje lag behöver ett startkort och det behövs fler att spela.
+            Välj fler decennier eller etiketter.
           </p>
-        )
-      )}
+        ) : (
+          playable.length < needed && (
+            <p className="muted small">
+              Kortleken kan ta slut: {teamCount} lag till {game.settings.targetLength} kort kan behöva runt {needed} låtar. Då
+              vinner laget med flest kort.
+            </p>
+          )
+        )}
+      </div>
       <ErrorText error={error} />
     </section>
   );

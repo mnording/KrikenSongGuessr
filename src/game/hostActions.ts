@@ -92,10 +92,21 @@ const songById = (songs: Song[]) => new Map(songs.map((s) => [s.id, s]));
 /** Hämtar albumbilden för ett kort. Ska ge null i stället för att kasta. */
 export type ArtLookup = (song: Song) => Promise<string | null>;
 
-export async function startGame(code: string, game: GameDoc, teams: Team[], songs: Song[], artFor: ArtLookup) {
+/**
+ * songs är hela låtlistan (för uppslag och Familj-lägets artistalternativ),
+ * deckSongs spelledarens urval som kortleken blandas ur.
+ */
+export async function startGame(
+  code: string,
+  game: GameDoc,
+  teams: Team[],
+  songs: Song[],
+  artFor: ArtLookup,
+  deckSongs: Song[] = songs,
+) {
   const setup = setupGame(
     teams.map((t) => t.uid),
-    songs.map((s) => s.id),
+    deckSongs.map((s) => s.id),
   );
   const byId = songById(songs);
   const first = drawCard(setup.deck);

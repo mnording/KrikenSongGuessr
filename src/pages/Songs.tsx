@@ -41,6 +41,7 @@ export default function Songs() {
   const [running, setRunning] = useState(false);
   const [playlist, setPlaylist] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [yearCheck, setYearCheck] = useState<{ done: number; total: number; failed: number; finished: boolean } | null>(null);
 
   useEffect(() => {
     void loadSongs().then((list) => {
@@ -81,14 +82,21 @@ export default function Songs() {
   };
 
   const checkYears = async () => {
+    const linked = songs.filter((s) => rows[s.id]?.uri);
     setRunning(true);
-    for (const song of songs) {
-      const row = rows[song.id];
-      if (!row?.uri) continue;
-      const year = await spotifyYear(song);
-      setRows((r) => ({ ...r, [song.id]: { ...r[song.id], spotifyYear: year } }));
+    setYearCheck({ done: 0, total: linked.length, failed: 0, finished: false });
+    let failed = 0;
+    try {
+      for (const [i, song] of linked.entries()) {
+        const year = await spotifyYear(song);
+        if (year === null) failed++;
+        setRows((r) => ({ ...r, [song.id]: { ...r[song.id], spotifyYear: year } }));
+        setYearCheck({ done: i + 1, total: linked.length, failed, finished: false });
+      }
+    } finally {
+      setYearCheck((c) => (c ? { ...c, finished: true } : c));
+      setRunning(false);
     }
-    setRunning(false);
   };
 
   const testPlay = async (song: Song) => {
@@ -141,15 +149,17 @@ export default function Songs() {
           {running ? 'Söker…' : 'Hitta alla på Spotify'}
         </button>
         <button type="button" disabled={running || resolved === 0} onClick={() => void checkYears()}>
-          Kontrollera år
+          {yearCheck && !yearCheck.finished ? `Kontrollerar… ${yearCheck.done} av ${yearCheck.total}` : 'Kontrollera år'}
         </button>
         <button type="button" onClick={exportSongs}>Ladda ner songs.json</button>
         <button type="button" onClick={() => void pause()}>Pausa</button>
       </div>
       <ErrorText error={error ?? player.error} />
-      {off > 0 && (
-        <p className="muted">
-          {off} låtar har ett annat år på Spotify. Ofta är det en remaster eller samling, men kontrollera originalåret.
+      {yearCheck?.finished && (
+        <p className="muted" role="status">
+          {off === 0 ? 'Klart: inga avvikande år.' : `Klart: ${off} låtar har ett annat år på Spotify. Ofta är det en remaster eller samling, men kontrollera originalåret.`}
+          {yearCheck.failed > 0 && ` ${yearCheck.failed} gick inte att kontrollera.`}
+          {songs.length > yearCheck.total && ` ${songs.length - yearCheck.total} är inte kopplade till Spotify än.`}
         </p>
       )}
 
@@ -166,7 +176,11 @@ export default function Songs() {
                   {song.artist}
                   {song.tags?.length ? ` · ${song.tags.join(', ')}` : ''}
                 </span>
-                {yearOff(song, row) && <span className="year-off small">⚠ Spotify säger {row!.spotifyYear}</span>}
+                {yearOff(song, row) && (
+                  <span className="year-off small">
+                    <span aria-hidden="true">⚠ </span>Spotify har {row!.spotifyYear}, vi har {song.year}
+                  </span>
+                )}
                 {row?.status === 'error' && <span className="error small">{row.message}</span>}
                 {row?.uri && <span className="muted small">{row.uri}</span>}
               </span>

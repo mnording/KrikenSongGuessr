@@ -25,6 +25,11 @@ export function filterSongs(songs: readonly Song[], filter: SongFilter | undefin
   );
 }
 
+/** Ett startkort per lag och minst ett kort kvar att spela. */
+export function hasEnoughSongs(songCount: number, teamCount: number): boolean {
+  return songCount > teamCount;
+}
+
 /**
  * Ungefär hur många låtar ett spel kan behöva: ett startkort per lag, och ungefär två turer
  * per kort laget behöver vinna, om hälften av gissningarna är rätt.
