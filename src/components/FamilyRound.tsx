@@ -53,6 +53,7 @@ export function FamilyRound({ code, game, me, myTurn, byArtist, pick, onPick }: 
         selected={own}
         answer={result ? (result.answer ?? null) : null}
         onSelect={onPick ?? (guessing ? guess : undefined)}
+        locked={byArtist && !onPick && own !== null}
       />
       {guessing && myGuess !== null && (
         <p className="hint" role="status">

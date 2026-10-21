@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 import { MASCOTS } from '../src/game/mascots';
+import { FAST_UNDO_MS } from '../src/game/modes';
 import { REACTION_IDS, TAUNT_IDS } from '../src/game/taunts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -262,7 +263,7 @@ describe('teams', () => {
 
 describe('moves', () => {
   const playing = { status: 'playing', phase: 'placing', turnIndex: 3, currentTeamUid: 't1' };
-  const move = (teamUid = 't1', turnIndex = 3) => ({ teamUid, turnIndex, slotIndex: 1 });
+  const move = (teamUid = 't1', turnIndex = 3) => ({ teamUid, turnIndex, slotIndex: 1, createdAt: serverTimestamp() });
 
   it('låter laget i tur lägga ett drag', async () => {
     await seed(playing, ['t1', 't2']);
@@ -283,7 +284,7 @@ describe('moves', () => {
   it('godtar ett artistval i stället för en lucka, men aldrig båda', async () => {
     await seed(playing, ['t1']);
     const ref = doc(db('t1'), 'games', CODE, 'moves', '3');
-    const base = { teamUid: 't1', turnIndex: 3 };
+    const base = { teamUid: 't1', turnIndex: 3, createdAt: serverTimestamp() };
     await assertFails(setDoc(ref, { ...base, choice: 4 }));
     await assertFails(setDoc(ref, { ...move(), choice: 1 }));
     await assertFails(setDoc(ref, base));
@@ -294,6 +295,18 @@ describe('moves', () => {
     await seed(playing, ['t1']);
     await assertFails(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), { ...move(), createdAt: new Date(Date.now() + 60_000) }));
     await assertSucceeds(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), { ...move(), createdAt: serverTimestamp() }));
+  });
+
+  it('kräver att draget har en tid, så att snabbläget alltid kan avslöja', async () => {
+    await seed(playing, ['t1']);
+    const { createdAt: _createdAt, ...withoutTime } = move();
+    void _createdAt;
+    await assertFails(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), withoutTime));
+  });
+
+  it('har samma ångerfönster som appen', () => {
+    const seconds = Number(readFileSync('firestore.rules', 'utf8').match(/resource\.data\.createdAt \+ duration\.value\((\d+), 's'\)/)?.[1]);
+    expect(seconds * 1000).toBe(FAST_UNDO_MS);
   });
 
   it('låter laget ångra sitt drag i snabbläget, men bara i fem sekunder', async () => {

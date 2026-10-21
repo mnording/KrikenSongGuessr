@@ -1,6 +1,5 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { getDoc } from 'firebase/firestore';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChoiceCards } from '../components/ChoiceCards';
 import { SongPicker } from '../components/SongPicker';
@@ -10,6 +9,7 @@ import { Timeline } from '../components/Timeline';
 import { cardLines, MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
 import { filterSongs, hasEnoughSongs } from '../engine/library';
 import { useCollection, useDoc } from '../hooks/firestore';
+import { useAutoReveal } from '../hooks/autoReveal';
 import { useNow, usePlayer, useSpotifyLoggedIn, useUser, useWakeLock } from '../hooks/misc';
 import {
   finishGame,
@@ -50,8 +50,12 @@ export default function HostGame() {
 
   useEffect(() => {
     void loadSongs().then(setSongs);
-    void loadFilms().then(setFilms);
   }, []);
+
+  const filmMode = game.data ? gameMode(game.data) === 'film' : false;
+  useEffect(() => {
+    if (filmMode) void loadFilms().then(setFilms);
+  }, [filmMode]);
 
   if (authError) return <Screen><ErrorText error={authError} /></Screen>;
   if (!user || game.loading) return <Loading />;
@@ -80,11 +84,11 @@ export default function HostGame() {
       </Screen>
     );
   }
-  if (teams.loading || state.loading || !songs || !films) return <Loading />;
+  if (teams.loading || state.loading || !songs || (filmMode && !films)) return <Loading />;
 
   const sortedTeams = [...teams.data].sort((a, b) => (a.joinedAt?.toMillis() ?? 0) - (b.joinedAt?.toMillis() ?? 0));
   // Film-läget har en egen lista. Den byts i lobbyn när spelledaren byter läge.
-  const list = gameMode(game.data) === 'film' ? films : songs;
+  const list = filmMode && films ? films : songs;
   return <HostView code={code} game={game.data} teams={sortedTeams} state={state.data} songs={list} />;
 }
 
@@ -92,9 +96,7 @@ type ViewProps = { code: string; game: GameDoc; teams: Team[]; state: PrivateSta
 
 function HostView({ code, game, teams, state, songs }: ViewProps) {
   // Kortleken blandas ur spelledarens urval (bara i lobbyn). Familj-lägets artister tas ur hela listan.
-  // Filmlåtarna har inga etiketter, så där gäller bara decennierna.
-  const filter = gameMode(game) === 'film' && game.settings.songFilter ? { ...game.settings.songFilter, tags: [] } : game.settings.songFilter;
-  const playable = filterSongs(songs, filter);
+  const playable = filterSongs(songs, game.settings.songFilter);
   const player = usePlayer();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -261,6 +263,7 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
   const tooMany = teams.length > MAX_TEAMS;
   const tooFewSongs = !hasEnoughSongs(playable.length, teams.length);
   const [modeError, setModeError] = useState<string | null>(null);
+  const [fastError, setFastError] = useState<string | null>(null);
 
   return (
     <>
@@ -320,20 +323,26 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
         </div>
       </div>
 
-      <div className="setting">
+      <section className="setting" aria-labelledby="fast-heading">
+        <h2 id="fast-heading">Snabbläge</h2>
         <button
           type="button"
           className="chip"
           aria-pressed={isFast(game)}
-          onClick={() => void setFastMode(code, !isFast(game)).catch(() => {})}
+          aria-describedby="fast-help"
+          onClick={() => {
+            setFastError(null);
+            setFastMode(code, !isFast(game)).catch((err) => setFastError(`Kunde inte ändra snabbläget: ${errorMessage(err)}`));
+          }}
         >
-          Snabbläge
+          {isFast(game) ? 'Snabbläge: på' : 'Snabbläge: av'}
         </button>
-        <p className="muted small">
+        <p id="fast-help" className="muted small">
           När ett lag låser har det {FAST_UNDO_MS / 1000} sekunder att ångra sig. Sedan visas svaret direkt, utan att du
           behöver trycka. Nästa låt startar du fortfarande själv.
         </p>
-      </div>
+        <ErrorText error={fastError} />
+      </section>
 
       <SongPicker code={code} game={game} songs={songs} playable={playable} teamCount={teams.length} showTags={gameMode(game) !== 'film'} />
 
@@ -374,24 +383,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
   const team = teams.find((t) => t.uid === game.currentTeamUid);
   const card = state?.currentCard;
 
-  // Snabbläget: avslöja själv när lagets ångerfönster har gått ut. Tiden räknas från när den här
-  // telefonen ser draget, så att klockor som går olika inte spelar roll, med lite marginal.
-  const latest = useRef({ team, onReveal, busy });
-  useEffect(() => {
-    latest.current = { team, onReveal, busy };
-  });
-  const lockedAt = move.data?.createdAt?.toMillis() ?? null;
+  useAutoReveal({ code, game, move: move.data, team, busy, onReveal });
   const fast = isFast(game);
-  useEffect(() => {
-    if (!fast || game.phase !== 'placing' || lockedAt === null) return;
-    const id = setTimeout(() => {
-      void getDoc(moveRef(code, game.turnIndex)).then((snap) => {
-        const { team: current, onReveal: reveal, busy: working } = latest.current;
-        if (snap.exists() && current && !working) reveal(current, snap.data() as MoveDoc);
-      });
-    }, FAST_UNDO_MS + 800);
-    return () => clearTimeout(id);
-  }, [fast, game.phase, lockedAt, code, game.turnIndex]);
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const selectedSlot = move.data?.slotIndex ?? (game.phase === 'placing' ? (team?.pendingSlot ?? null) : null);
   const byArtist = Boolean(team && answersByChoice(game, team));

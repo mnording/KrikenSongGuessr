@@ -38,6 +38,9 @@ export function choiceTexts(game: GameDoc) {
 /** Snabbläget: så länge laget kan ångra sitt drag. Samma gräns står i firestore.rules. */
 export const FAST_UNDO_MS = 5_000;
 
+/** Snabbläget: senast så här länge efter turens första drag avslöjas svaret, hur mycket laget än ångrar. */
+export const FAST_REVEAL_CAP_MS = 12_000;
+
 export const isFast = (game: GameDoc) => game.settings.fastMode === true;
 
 /** Bokstäverna framför artisterna, så att det är lätt att ropa ut svaret. */

@@ -17,7 +17,6 @@ export function UndoDock({ code, turnIndex, lockedAt, onUndone }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const left = Math.ceil((lockedAt + FAST_UNDO_MS - now) / 1000);
-  if (left <= 0 && !error) return null;
 
   const undo = () => {
     setBusy(true);
@@ -30,13 +29,13 @@ export function UndoDock({ code, turnIndex, lockedAt, onUndone }: Props) {
   return (
     <div className="sticky-actions">
       <div className="undo-dock">
-        {error ? (
+        {error || left <= 0 ? (
           <p className="hint" role="status">
-            {error}
+            {error ?? 'Ångra-tiden är slut. Svaret visas strax.'}
           </p>
         ) : (
-          <button type="button" className="undo" disabled={busy} onClick={undo}>
-            Ångra ({Math.min(left, FAST_UNDO_MS / 1000)})
+          <button type="button" className="undo" aria-label="Ångra" disabled={busy} onClick={undo}>
+            <span aria-hidden="true">↩ Ångra ({Math.min(left, FAST_UNDO_MS / 1000)})</span>
           </button>
         )}
       </div>

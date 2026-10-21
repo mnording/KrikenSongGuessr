@@ -327,7 +327,8 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 - **Open (theirs):** the same stub, transparent with a Theirs Outline dashed edge and muted text, reading "De funderar här…" or "Låst här".
 
 ### Undo (fast mode)
-- After a team locks in fast mode, the dock shows "Ångra (5)" counting down: Night Raised fill, 2px Acid Lime edge, display face at 1.5rem, like the taunt button. The hint above reads "Låst! Svaret visas om några sekunder." Undoing returns the team to its selection with the same choice still marked, so it can change and lock again. A late tap shows "För sent att ångra" instead of an error.
+- After a team locks in fast mode, the dock shows "↩ Ångra (5)" counting down: Night Raised fill, 2px Acid Lime edge, display face at 1.5rem. Its accessible name stays "Ångra" while the number changes. The hint above reads "Låst! Svaret visas om några sekunder.", and a locked choice carries an ink "Låst" tag. When the window closes, the dock turns into a status line ("Ångra-tiden är slut. Svaret visas strax."). Undoing returns the team to its selection with the same choice still marked, so it can change and lock again. A late tap shows "För sent att ångra" instead of an error.
+- In the host lobby, fast mode is its own "Snabbläge" section with a toggle that reads "Snabbläge: på" or "Snabbläge: av" and an explanation under it.
 
 ### Film cards
 - In Film mode a stub shows the film as its title line and "song – artist" as its second line; the year is the premiere year. The host's answer panel and result say the film first.

@@ -82,7 +82,7 @@ service cloud.firestore {
           && request.resource.data.turnIndex == game(code).turnIndex
           && moveId == string(game(code).turnIndex)
           && validMove(request.resource.data)
-          && (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time);
+          && request.resource.data.createdAt == request.time;
 
         allow update: if false;
 

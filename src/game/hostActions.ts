@@ -66,9 +66,10 @@ export async function setTargetLength(code: string, target: number) {
   await batch.commit();
 }
 
+/** Filmlåtarna har inga etiketter, så Film nollställer etikettvalet. */
 export async function setMode(code: string, mode: GameMode) {
   const batch = writeBatch(db);
-  batch.update(gameRef(code), { 'settings.mode': mode });
+  batch.update(gameRef(code), mode === 'film' ? { 'settings.mode': mode, 'settings.songFilter.tags': [] } : { 'settings.mode': mode });
   await batch.commit();
 }
 

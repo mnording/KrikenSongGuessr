@@ -36,7 +36,9 @@ export function SongPicker({ code, game, songs, playable, teamCount, showTags = 
   const [filter, setFilter] = useState<SongFilter>(game.settings.songFilter ?? { decades: [], tags: [] });
   const needed = songsNeeded(teamCount, game.settings.targetLength);
 
-  const save = (next: SongFilter) => {
+  const save = (choice: SongFilter) => {
+    // Utan etiketter (Film) sparas inga gamla etiketter tillbaka.
+    const next = showTags ? choice : { ...choice, tags: [] };
     setFilter(next);
     setError(null);
     setSongFilter(code, next).catch((err) => setError(`Kunde inte spara urvalet: ${errorMessage(err)}`));

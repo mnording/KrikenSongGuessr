@@ -235,7 +235,7 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
       )}
       {gameMode(game) === 'film' && (
         <p className="hint">
-          Film-läget. Lyssna och <strong>gissa vilken film låten kommer från</strong>, bland fyra.
+          I Film-läget <strong>gissar ni vilken film låten kommer från</strong>. Det finns fyra att välja bland.
         </p>
       )}
       <p className="hint">Väntar på att spelledaren startar spelet…</p>

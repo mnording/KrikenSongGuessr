@@ -11,9 +11,11 @@ type Props = {
   answer?: number | null;
   /** Saknas när valet är låst eller turen avslöjad. */
   onSelect?: (index: number) => void;
+  /** Lagets val är låst men inte avslöjat. */
+  locked?: boolean;
 };
 
-export function ArtistChoices({ choices, label, selected, answer = null, onSelect }: Props) {
+export function ArtistChoices({ choices, label, selected, answer = null, onSelect, locked = false }: Props) {
   const headingId = useId();
   const revealed = answer !== null;
   return (
@@ -40,6 +42,7 @@ export function ArtistChoices({ choices, label, selected, answer = null, onSelec
                 <span className="choice-name">{artist}</span>
                 {right && <span className="choice-tag">Rätt svar</span>}
                 {wrong && <span className="choice-tag">Ert val</span>}
+                {locked && picked && !revealed && <span className="choice-tag">Låst</span>}
                 {picked && right && <span className="visually-hidden"> (ert val)</span>}
               </button>
             </li>
