@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TEAM_COLORS } from './game/types';
+import { MASCOTS } from './game/mascots';
 import { genitive, textOn } from './util';
 
 describe('genitive', () => {
@@ -25,7 +25,7 @@ describe('textOn', () => {
   };
 
   it('väljer den starkaste texten, och den klarar stor text (3:1) på alla lagfärger', () => {
-    for (const { value } of TEAM_COLORS) {
+    for (const { color: value } of MASCOTS) {
       const chosen = textOn(value) === '#fff' ? '#ffffff' : textOn(value);
       const other = chosen === '#ffffff' ? '#0f172a' : '#ffffff';
       expect(contrast(value, chosen), value).toBeGreaterThanOrEqual(contrast(value, other));

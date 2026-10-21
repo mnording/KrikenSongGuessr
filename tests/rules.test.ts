@@ -13,6 +13,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
+import { MASCOTS } from '../src/game/mascots';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const PROJECT = 'demo-krikensongguessr';
@@ -80,7 +81,7 @@ beforeEach(async () => {
   await fetch(docsUrl.replace('/v1/', '/emulator/v1/'), { method: 'DELETE' });
 });
 
-const team = (name = 'Lag') => ({ name, color: '#e11d48', connected: true, lastSeen: 1, joinedAt: 1 });
+const team = (name = 'Lag') => ({ name, color: '#e11d48', mascot: 'kalle', connected: true, lastSeen: 1, joinedAt: 1 });
 
 async function seed(game: Record<string, Value>, teams: string[] = []) {
   await adminSet(`games/${CODE}`, {
@@ -156,6 +157,45 @@ describe('teams', () => {
     await assertFails(updateDoc(doc(db('t2'), 'games', CODE, 'teams', 't1'), { name: 'Kapat' }));
   });
 
+  it('godtar bara kända maskotar, och lag utan maskot', async () => {
+    await seed({});
+    const ref = doc(db('t1'), 'games', CODE, 'teams', 't1');
+    await assertFails(setDoc(ref, { ...team(), mascot: 'okänd' }));
+    const old: Record<string, unknown> = team();
+    delete old.mascot;
+    await assertSucceeds(setDoc(ref, old));
+    await assertSucceeds(updateDoc(ref, { mascot: 'ulla', color: '#64748b' }));
+    await assertFails(updateDoc(ref, { mascot: 'Ulla' }));
+    await assertFails(updateDoc(ref, { mascot: 'kalle', color: '#64748b' }));
+  });
+
+  it('har samma maskotlista som appen', () => {
+    const rules = readFileSync('firestore.rules', 'utf8');
+    const pairs = [...rules.matchAll(/'([a-z]+)': '(#[0-9a-f]{6})'/g)].map(([, id, color]) => ({ id, color }));
+    expect(pairs).toEqual(MASCOTS.map(({ id, color }) => ({ id, color })));
+  });
+
+  it('låter laget välja nivå i lobbyn men inte efter start', async () => {
+    await seed({}, ['t1']);
+    const ref = doc(db('t1'), 'games', CODE, 'teams', 't1');
+    await assertSucceeds(updateDoc(ref, { level: 'easy' }));
+    await assertFails(updateDoc(ref, { level: 'lätt' }));
+    await seed({ status: 'playing' }, ['t1']);
+    await assertFails(updateDoc(ref, { level: 'hard' }));
+    await assertSucceeds(updateDoc(ref, { name: 'Samma nivå' }));
+  });
+
+  it('låter laget gissa med, men bara ett av fyra alternativ', async () => {
+    await seed({ status: 'playing' }, ['t1']);
+    const ref = doc(db('t1'), 'games', CODE, 'teams', 't1');
+    await assertSucceeds(updateDoc(ref, { guess: { turnIndex: 4, choice: 3 } }));
+    await assertSucceeds(updateDoc(ref, { guess: null }));
+    await assertFails(updateDoc(ref, { guess: { turnIndex: 4, choice: 4 } }));
+    await assertFails(updateDoc(ref, { guess: { turnIndex: 4, choice: 1, rätt: true } }));
+    await seed({ status: 'playing', phase: 'revealed' }, ['t1']);
+    await assertFails(updateDoc(ref, { guess: { turnIndex: 4, choice: 1 } }));
+  });
+
   it('låter spelledaren skriva tidslinje och ta bort lag', async () => {
     await seed({ status: 'playing' }, ['t1']);
     const ref = doc(db('host'), 'games', CODE, 'teams', 't1');
@@ -189,6 +229,16 @@ describe('moves', () => {
     await assertFails(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), { ...move(), slotIndex: -1 }));
     await seed({ ...playing, phase: 'revealed' }, ['t1']);
     await assertFails(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), move()));
+  });
+
+  it('godtar ett artistval i stället för en lucka, men aldrig båda', async () => {
+    await seed(playing, ['t1']);
+    const ref = doc(db('t1'), 'games', CODE, 'moves', '3');
+    const base = { teamUid: 't1', turnIndex: 3 };
+    await assertFails(setDoc(ref, { ...base, choice: 4 }));
+    await assertFails(setDoc(ref, { ...move(), choice: 1 }));
+    await assertFails(setDoc(ref, base));
+    await assertSucceeds(setDoc(ref, { ...base, choice: 2 }));
   });
 
   it('låter inte ett drag ändras när det är lagt', async () => {

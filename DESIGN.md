@@ -190,12 +190,13 @@ The game runs in two visual worlds, and which one applies is decided by route. *
 
 **The host's phone and the entry screens (`/`, `/host`, `/host/:code`, `/host/songs`, `/join/:code`, and the plain fallback screens inside Play such as "Spelet finns inte längre" and "Spelet är fullt") keep the incumbent dark-slate console** from `src/index.css`: slate surfaces, system-ui type, a single green primary, 14px rounding throughout. It is the original POC look and is documented here as it stands; it has not been redesigned and this file does not propose one. New player-surface work extends Festivalbiljetten; new host work extends the slate console until a deliberate host redesign replaces it.
 
-Festivalbiljetten is flat print, not texture: bands are solid team colour, the snap on the wristband is a plain paper disc, tickets are flat paper with notched edges and a dashed tear line. Its drama comes from scale (a condensed 900-weight display face at up to 4.4rem) and from the one lime colour, not from effects.
+Festivalbiljetten is flat print, not texture: bands are solid team colour, the snap on the wristband is a plain paper disc (or the team's mascot on a paper pin), tickets are flat paper with notched edges and a dashed tear line. Its drama comes from scale (a condensed 900-weight display face at up to 4.4rem) and from the one lime colour, not from effects.
 
 **Key Characteristics:**
 - Two route-scoped worlds: Festivalbiljetten for teams, dark-slate console for the host and entry screens.
 - Night indigo ground, thermal-white ticket paper, ink-indigo print.
 - Team colour appears only as solid wristband fill, full-bleed or as a pill.
+- Every team has a mascot, drawn in the same flat print and always shown on a paper pin.
 - Acid lime marks what can be pressed, plus the one stub just won.
 - Big Shoulders Display for years, banners and the lock button; Archivo for everything you read.
 - Perforations between stubs are the placement slots.
@@ -208,7 +209,7 @@ Festivalbiljetten is a dark indigo night with paper and ink as the neutrals, tea
 - **Acid Lime** (`acid-lime`): the action colour. Fills the docked LÅS button, outlines and tints the open "?" stub (with `acid-lime-wash`), draws the focus ring (3px) and the hover ring on the perforation plus, and is the text-selection colour. It also lights the stub a team just won until the next turn; that is its only non-pressable use.
 
 ### Secondary
-- **Team colours** (runtime, from the ten-colour team palette in `src/game/types.ts`: red, orange, yellow, green, teal, blue, violet, pink, brown, grey): never tokens in this file, always applied inline as the full fill of a wristband or a team band. Text on them is chosen by the contrast helper (`textOn`), white or near-black, never hand-picked.
+- **Team colours** (runtime, one per mascot in `src/game/mascots.ts`: red, orange, yellow, green, teal, blue, violet, pink, brown, grey; picking a mascot picks its colour): never tokens in this file, always applied inline as the full fill of a wristband or a team band. Text on them is chosen by the contrast helper (`textOn`), white or near-black, never hand-picked.
 
 ### Tertiary
 - **Miss Coral** (`miss-coral`): error text on the night ground.
@@ -218,7 +219,7 @@ Festivalbiljetten is a dark indigo night with paper and ink as the neutrals, tea
 - **Night** (`night`): the ground of every player screen and the browser theme colour while the player world is mounted.
 - **Night Raised** (`night-raised`): the disabled lock dock and any boxed container (inherited card boxes, e.g. the profile editor).
 - **Night Band** (`night-band`): the wristband's fallback fill when no team owns the screen ("Väntar…"), and input borders.
-- **Ticket Paper** (`ticket-paper`): stub stock, the wristband snap, the count discs on team bands.
+- **Ticket Paper** (`ticket-paper`): stub stock, the wristband snap, mascot pins, the count discs on team bands.
 - **Ink** (`ink`): print on paper and lime; also the fill of the small offline and verdict tags. Same value as Night by design: the print is the sky.
 - **Ink Soft** (`ink-soft`): artist line on a stub.
 - **Stub Rule** (`stub-rule`): the dashed tear line inside a stub between year and text.
@@ -264,7 +265,7 @@ Festivalbiljetten is a dark indigo night with paper and ink as the neutrals, tea
 
 ## Layout
 
-Single phone column: the incumbent `.screen` container (max 560px, 16px side gutter, bottom padding clearing the dock and safe area) carries both worlds. In Festivalbiljetten the wristband breaks the gutter (−16px margins) to run full-bleed at the top, padded down by the safe-area inset, with 72px of right padding reserved for the snap.
+Single phone column: the incumbent `.screen` container (max 560px, 16px side gutter, bottom padding clearing the dock and safe area) carries both worlds. In Festivalbiljetten the wristband breaks the gutter (−16px margins) to run full-bleed at the top, padded down by the safe-area inset, with 72px of right padding reserved for the snap (116px on our own wristband, where the mascot pin is larger).
 
 Below it, every team is visible at once in a whole-cell grid, never a sideways scroller: **2 columns for up to 8 teams, 3 columns for 9–10**, 6px gaps, 14px above. Then one hint line (14px above, 10px below), then the stub strip running full column width, then the footer line. The LÅS button docks fixed at the bottom over a night gradient (transparent to Night at 32%).
 
@@ -284,7 +285,7 @@ Both worlds are flat. Festivalbiljetten has no drop shadows; depth comes from pa
 
 Festivalbiljetten has three silhouettes. **Tickets** are near-square rectangles (6px) with a 9px semicircular notch bitten out of the middle of each side by a mask, and a 2px dashed tear line separating year from text. **Bands** are full pills (22px on a 44px band) with a round-ended count disc (14px). **Tags** are tiny ink rectangles (4px). The wristband itself is square-edged and full-bleed; its snap is a 30px circle. Perforations are 2px dashed lines; a selectable slot shows a 26px ringed plus centred on the perforation. The lock is a 10px-rounded slab.
 
-The host console uses one radius everywhere (14px) with 10px for list rows and a 50% circle for colour swatches and team dots.
+The host console uses one radius everywhere (14px) with 10px for list rows and a 50% circle for mascot pins and team dots.
 
 ## Components
 
@@ -292,11 +293,21 @@ The host console uses one radius everywhere (14px) with 10px for list rows and a
 The top of every player screen; it tells the room whose screen this is.
 - **Fill:** the owning team's colour with contrast-chosen text; Night Band when nobody owns the turn.
 - **Content:** one display headline and an optional label sub-line; ours is set at Display size, other teams' at Headline size.
-- **Snap:** a 30px paper disc with an inset ink ring, bottom right.
+- **Snap:** a 30px paper disc with an inset ink ring, bottom right. When the owning team has a mascot, its pin replaces the snap: 88px on our own wristband, 60px on another team's (their names are long and keep the snap's width).
 - **Motion:** wipes in left to right (`clip-path` inset, 0.5s, `cubic-bezier(0.16, 1, 0.3, 1)`) each time its owner or headline changes. It is a live status region.
+
+### Mascot Pin (signature)
+Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, backstory), drawn as inline SVG in `src/components/Mascot.tsx`.
+- **Style:** the same flat print as the rest of the world. The body is the team colour, features are Ink with a 3px stroke, and eyes, muzzles and props are Ticket Paper. No gradients, no shadows, no other colours.
+- **Pin:** the mascot always sits on a round Ticket Paper disc with a faint inset ink ring, so it reads on its own team colour and on night or slate alike. Props may poke slightly past the disc, never far.
+- **Moods:** `idle`, `happy` (closed smiling eyes, open mouth), `sad` (raised inner brows, frown, one paper tear) and `cheeky` (a wink and a tongue, kept for taunts). Bodies stay fixed and only the face changes.
+- **Motion:** only on an animated pin (the wristband, the selected picker pin): idle bobs slowly, happy jumps twice, sad droops and stays, cheeky wiggles. Reduced motion stops all of it, and the face still carries the mood.
+- **Reactions:** our lobby wristband is happy, a revealed turn makes the result team's mascot happy or sad, and the winner's mascot is happy on the end screen.
+- **Accessibility:** decorative (`aria-hidden`); the team name is always next to it.
 
 ### Team Bands
 - **Style:** solid team-colour pill, 44px tall, bold name left (two lines max), paper count disc right in the display face.
+- **Mascot:** in the lobby (no counts) a 30px mascot pin leads the band, hidden in the three-column grid. In game the name and count need the whole width, so the band has no mascot.
 - **Shown:** the band whose timeline is on screen gets a 2px Night Text outline at 2px offset; tapping a band shows that team's timeline.
 - **Offline:** the name stays fully readable; a small ink "offline" tag sits under it and the count disc fades to 0.55.
 - **Winner:** the count disc inverts to ink with paper figures.
@@ -315,6 +326,14 @@ The top of every player screen; it tells the room whose screen this is.
 - **Open (ours):** choosing a slot tears the strip open into an unnotched stub with a 3px dashed lime edge, lime wash, a lime "?" and "Här – mellan X och Y"; it grows in (0.35s scale and fade).
 - **Open (theirs):** the same stub, transparent with a Theirs Outline dashed edge and muted text, reading "De funderar här…" or "Låst här".
 
+### Artist Choices (Familj)
+Four artists for the turn, in `src/components/ArtistChoices.tsx`.
+- **Style:** full-width Ticket Paper slabs, 56px minimum, 6px rounding, no notches. A letter A–D in the display face sits left of a dashed tear line, so kids can shout "B!"; the artist name is Body Strong.
+- **Who sees them:** the Lätt team whose turn it is picks and then locks with the docked LÅS ("Välj en artist" until something is picked). Every other team gets the same list headed "Gissa med: vem sjunger?" and can change its guess until the reveal. A Svår team doesn't see them on its own turn.
+- **Picked:** a 3px Acid Lime outline at 2px offset. A side guess also gets a status line under the list ("Ni gissar på B. Ni kan ändra tills svaret visas."), and a failed guess shows its error right there.
+- **Revealed:** the right artist fills Acid Lime with an ink "Rätt svar" tag (0.85rem, 800; a long name pushes the tag to its own line), like a just-won stub; a wrong pick gets a Miss Print strike-through and an "Ert val" tag. A side guess also gets one line with the team's mascot, happy or sad.
+- **Heading:** with choices on screen the timeline below always gets its own heading ("Er tidslinje"), so its first stub can't be mistaken for a fifth option.
+
 ### Buttons
 - **Lock (primary):** Acid Lime slab, 64px tall, 10px rounding, ink Action type, docked at the bottom.
 - **Lock disabled:** stays fully opaque, Night Raised fill, 2px dashed Perforation edge, muted 1.5rem prompt.
@@ -330,7 +349,8 @@ The top of every player screen; it tells the room whose screen this is.
 - **Cards and rows:** slate-surface fill, 14px (cards) or 10px (rows), 16px / 12px padding; the current team row gets a 2px text-colour outline.
 - **Turn banner and result:** the current team's turn banner fills with that team's colour (contrast-chosen text, 1.35rem, 800); the reveal result panel fills Host Correct or Host Wrong with a short pop-in.
 - **Timeline (host):** slate-surface cards with a 6px team-colour left edge and a 1.5rem 800 year; slots are 2px dashed slate-border boxes.
-- **Colour picker (Join):** five-column grid of circular swatches; the selected one gets a text-colour ring.
+- **Mascot picker (Join, and the lobby editor):** five-column grid of mascot pins; the selected one jumps and gets a ring, mascots other teams hold are dimmed and can't be picked, and the chosen mascot's name and backstory sit under the grid.
+- **Level and mode cards (Familj):** two bordered cards (3px border, 14px rounding) with a bold name and a muted one-line explanation; the selected card's border turns text-colour. Teams pick Lätt or Svår in the join form when the game is in Familj, and the player lobby shows the same two cards directly (not behind Ändra), so teams that joined before the host switched mode can still choose. On the night ground the unselected border is Night Muted at 35%. The host picks the mode with the same cards, in one column, in the lobby. The host's team lists show the level as a small badge.
 
 ## Do's and Don'ts
 

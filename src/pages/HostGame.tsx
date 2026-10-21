@@ -1,7 +1,8 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { ErrorText, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
+import { ChoiceCards } from '../components/ChoiceCards';
+import { ErrorText, LevelBadge, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
 import { Timeline } from '../components/Timeline';
 import { MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
@@ -14,11 +15,13 @@ import {
   removeTeam,
   reveal,
   saveDeviceId,
+  setMode,
   setTargetLength,
   startGame,
 } from '../game/hostActions';
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
-import type { GameDoc, MoveDoc, PrivateState, Team, TeamDoc } from '../game/types';
+import { MODES } from '../game/modes';
+import { gameMode, teamLevel, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
 import { albumArt, loadSongs, resolveUri } from '../spotify/catalog';
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
@@ -239,6 +242,7 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
   const target = game.settings.targetLength;
   const tooFew = teams.length < MIN_TEAMS;
   const tooMany = teams.length > MAX_TEAMS;
+  const [modeError, setModeError] = useState<string | null>(null);
 
   return (
     <>
@@ -256,6 +260,7 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
         {teams.map((t) => (
           <li key={t.uid}>
             <TeamName team={t} now={now} />
+            <LevelBadge game={game} team={t} />
             <button
               type="button"
               className="link danger"
@@ -268,6 +273,21 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
           </li>
         ))}
       </ul>
+
+      <div className="setting">
+        <ChoiceCards
+          legend="Spelläge"
+          name="mode"
+          className="modes"
+          options={MODES}
+          value={gameMode(game)}
+          onChange={(mode) => {
+            setModeError(null);
+            setMode(code, mode).catch((err) => setModeError(`Kunde inte byta läge: ${errorMessage(err)}`));
+          }}
+        />
+        <ErrorText error={modeError} />
+      </div>
 
       <div className="setting">
         <label htmlFor="target">Kort för att vinna (inklusive startkortet)</label>
@@ -320,6 +340,10 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
   const card = state?.currentCard;
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const selectedSlot = move.data?.slotIndex ?? (game.phase === 'placing' ? (team?.pendingSlot ?? null) : null);
+  const byArtist = Boolean(team && gameMode(game) === 'family' && teamLevel(team) === 'easy');
+  const choices = game.choices ?? [];
+  const picked = move.data?.choice ?? result?.choice ?? null;
+  const pickedName = picked !== null ? choices[picked] : undefined;
 
   return (
     <>
@@ -374,13 +398,16 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
         <div className={`result ${result.correct ? 'correct' : 'wrong'}`} role="status">
           <strong>{result.correct ? 'Rätt!' : 'Fel!'}</strong>{' '}
           {result.card.title} – {result.card.artist} ({result.card.year})
+          {byArtist && <p>Laget valde {pickedName ?? 'ingen artist'}.</p>}
           {result.reachedTarget && <p><strong>{team?.name} har {game.settings.targetLength} kort och vinner!</strong></p>}
         </div>
       )}
 
       {game.phase === 'placing' && (
         <p className="move-status">
-          {move.data ? `${team?.name ?? 'Laget'} har låst sitt svar.` : `Väntar på att ${team?.name ?? 'laget'} placerar…`}
+          {move.data
+            ? `${team?.name ?? 'Laget'} har låst ${pickedName ?? 'sitt svar'}.`
+            : `Väntar på att ${team?.name ?? 'laget'} ${byArtist ? 'väljer artist' : 'placerar'}…`}
         </p>
       )}
 
@@ -415,6 +442,7 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
         {teams.map((t) => (
           <li key={t.uid} className={t.uid === game.currentTeamUid ? 'current' : undefined}>
             <TeamName team={t} now={now} />
+            <LevelBadge game={game} team={t} />
             <span className="score">{t.timeline?.length ?? 0} / {game.settings.targetLength}</span>
           </li>
         ))}

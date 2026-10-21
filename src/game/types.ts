@@ -4,6 +4,12 @@ import type { Song, TimelineCard } from '../engine/game';
 export type GameStatus = 'lobby' | 'playing' | 'finished';
 export type GamePhase = 'placing' | 'revealed';
 
+/** Tidslinje: alla lägger låten rätt. Familj: varje lag väljer nivå, och alla får gissa artist. */
+export type GameMode = 'timeline' | 'family';
+
+/** Lätt: välj artist bland fyra. Svår: lägg låten i tidslinjen. */
+export type TeamLevel = 'easy' | 'hard';
+
 export type LastResult = {
   teamUid: string;
   turnIndex: number;
@@ -12,13 +18,18 @@ export type LastResult = {
   card: TimelineCard;
   /** Laget nådde mållängden med det här kortet. */
   reachedTarget: boolean;
+  /** Familj: alternativet laget valde, om det valde artist. */
+  choice?: number | null;
+  /** Familj: vilket alternativ som var rätt. */
+  answer?: number | null;
 };
 
 export type GameDoc = {
   hostUid: string;
   status: GameStatus;
   phase: GamePhase;
-  settings: { targetLength: number };
+  /** mode saknas i spel från före spellägena, och betyder då tidslinje. */
+  settings: { targetLength: number; mode?: GameMode };
   turnOrder: string[];
   /** Turens nummer. Ökar hela tiden, även mellan omgångar, så att gamla drag aldrig matchar. */
   turnIndex: number;
@@ -27,12 +38,22 @@ export type GameDoc = {
   winnerUids: string[];
   endReason: 'target' | 'deck' | 'host' | null;
   cardsLeft: number;
+  /** Familj: turens fyra artister. Vilken som är rätt vet bara spelledaren tills avslöjandet. */
+  choices?: string[] | null;
   createdAt?: Timestamp;
 };
 
+export const gameMode = (game: GameDoc): GameMode => game.settings.mode ?? 'timeline';
+
 export type TeamDoc = {
   name: string;
+  /** Följer maskoten. Lag från före maskotarna har bara färgen. */
   color: string;
+  mascot?: string;
+  /** Gäller i Familj-läget. Saknas den är laget svårt. */
+  level?: TeamLevel;
+  /** Familj: lagets egen gissning när det inte är dess tur. Ger inga kort. */
+  guess?: { turnIndex: number; choice: number } | null;
   connected: boolean;
   lastSeen?: Timestamp | null;
   joinedAt?: Timestamp | null;
@@ -45,7 +66,9 @@ export type Team = TeamDoc & { uid: string };
 export type MoveDoc = {
   teamUid: string;
   turnIndex: number;
-  slotIndex: number;
+  /** Svåra lag lägger i en lucka, lätta lag väljer ett alternativ. */
+  slotIndex?: number;
+  choice?: number;
   createdAt?: Timestamp;
 };
 
@@ -56,21 +79,10 @@ export type PrivateState = {
   spotifyDeviceId: string | null;
 };
 
-export const TEAM_COLORS = [
-  { value: '#e11d48', name: 'Röd' },
-  { value: '#f97316', name: 'Orange' },
-  { value: '#eab308', name: 'Gul' },
-  { value: '#22c55e', name: 'Grön' },
-  { value: '#14b8a6', name: 'Turkos' },
-  { value: '#3b82f6', name: 'Blå' },
-  { value: '#8b5cf6', name: 'Lila' },
-  { value: '#ec4899', name: 'Rosa' },
-  { value: '#a16207', name: 'Brun' },
-  { value: '#64748b', name: 'Grå' },
-];
-
 export const OFFLINE_AFTER_MS = 30_000;
 export const HEARTBEAT_MS = 10_000;
+
+export const teamLevel = (team: TeamDoc): TeamLevel => team.level ?? 'hard';
 
 export function isOnline(team: TeamDoc, now = Date.now()): boolean {
   if (!team.connected) return false;

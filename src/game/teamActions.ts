@@ -1,11 +1,21 @@
 // Det ett lag får skriva: sin egen lagprofil och sina drag.
 import { deleteDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { getMascot, type MascotId } from './mascots';
 import { moveRef, teamRef } from './refs';
+import type { TeamLevel } from './types';
 
-export async function joinGame(code: string, uid: string, name: string, color: string) {
+// Laget väljer maskot, färgen följer med den.
+const profile = (name: string, mascot: MascotId) => ({
+  name: name.trim().slice(0, 24),
+  mascot,
+  color: getMascot(mascot)!.color,
+});
+
+export async function joinGame(code: string, uid: string, name: string, mascot: MascotId, level: TeamLevel = 'hard') {
   await setDoc(teamRef(code, uid), {
-    name: name.trim().slice(0, 24),
-    color,
+    ...profile(name, mascot),
+    // Nivån gäller bara i Familj-läget, men sparas alltid så att spelledaren kan byta läge i lobbyn.
+    level,
     connected: true,
     lastSeen: serverTimestamp(),
     joinedAt: serverTimestamp(),
@@ -13,8 +23,13 @@ export async function joinGame(code: string, uid: string, name: string, color: s
   });
 }
 
-export async function updateProfile(code: string, uid: string, name: string, color: string) {
-  await updateDoc(teamRef(code, uid), { name: name.trim().slice(0, 24), color });
+export async function updateProfile(code: string, uid: string, name: string, mascot: MascotId) {
+  await updateDoc(teamRef(code, uid), profile(name, mascot));
+}
+
+/** Bara i lobbyn. */
+export async function setLevel(code: string, uid: string, level: TeamLevel) {
+  await updateDoc(teamRef(code, uid), { level });
 }
 
 export async function leaveGame(code: string, uid: string) {
@@ -36,4 +51,19 @@ export async function lockMove(code: string, uid: string, turnIndex: number, slo
     slotIndex,
     createdAt: serverTimestamp(),
   });
+}
+
+/** Familj, lätt lag: lagets val av artist är dess drag för turen. */
+export async function lockChoice(code: string, uid: string, turnIndex: number, choice: number) {
+  await setDoc(moveRef(code, turnIndex), {
+    teamUid: uid,
+    turnIndex,
+    choice,
+    createdAt: serverTimestamp(),
+  });
+}
+
+/** Familj: de andra lagen gissar med. Går att ändra fram till avslöjandet och ger inga kort. */
+export async function guessArtist(code: string, uid: string, turnIndex: number, choice: number) {
+  await updateDoc(teamRef(code, uid), { guess: { turnIndex, choice } });
 }

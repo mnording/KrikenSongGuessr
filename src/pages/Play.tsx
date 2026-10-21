@@ -1,15 +1,20 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import '../play.css';
 import { Link, Navigate, useParams } from 'react-router';
+import { ChoiceCards } from '../components/ChoiceCards';
 import { ErrorText, Loading, Screen } from '../components/Common';
+import { FamilyRound } from '../components/FamilyRound';
+import { MascotPin } from '../components/Mascot';
 import { ProfileForm } from '../components/ProfileForm';
 import { TicketTimeline } from '../components/TicketTimeline';
 import { MAX_TEAMS } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
-import { leaveGame, lockMove, selectSlot, updateProfile } from '../game/teamActions';
-import { isOnline, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
+import { leaveGame, lockChoice, lockMove, selectSlot, setLevel, updateProfile } from '../game/teamActions';
+import { getMascot, MASCOTS, type MascotMood } from '../game/mascots';
+import { LEVELS, showsChoices } from '../game/modes';
+import { gameMode, isOnline, teamLevel, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
 import { errorMessage, genitive, textOn } from '../util';
 
 export default function Play() {
@@ -43,14 +48,21 @@ export default function Play() {
 
   const sortedTeams = [...teams.data].sort((a, b) => (a.joinedAt?.toMillis() ?? 0) - (b.joinedAt?.toMillis() ?? 0));
 
-  if (game.data.status === 'lobby') return <Lobby code={code} me={me} teams={sortedTeams} />;
+  if (game.data.status === 'lobby') return <Lobby code={code} game={game.data} me={me} teams={sortedTeams} />;
   if (game.data.status === 'finished') {
     const winners = sortedTeams.filter((t) => game.data!.winnerUids.includes(t.uid));
     const bandTeam = winners.find((t) => t.uid === me.uid) ?? winners[0];
     const byScore = [...sortedTeams].sort((a, b) => (b.timeline?.length ?? 0) - (a.timeline?.length ?? 0));
     return (
       <FestPage>
-        <Wristband color={bandTeam?.color} mine={bandTeam?.uid === me.uid} big={winnerTitle(game.data, teams.data, me.uid)} sub="Spelet är slut" />
+        <Wristband
+          color={bandTeam?.color}
+          mascot={bandTeam?.mascot}
+          mood="happy"
+          mine={bandTeam?.uid === me.uid}
+          big={winnerTitle(game.data, teams.data, me.uid)}
+          sub="Spelet är slut"
+        />
         <Bands teams={byScore} winnerUids={game.data.winnerUids} />
         <p className="hint">Spelledaren kan starta en ny omgång.</p>
         <h2>Er tidslinje</h2>
@@ -78,17 +90,21 @@ function FestPage({ children }: { children: ReactNode }) {
   );
 }
 
-/** Armbandet överst: vems skärm det är just nu. Spelas in på nytt när innehållet byts. */
-function Wristband({ color, big, sub, mine = false }: { color?: string; big: ReactNode; sub?: ReactNode; mine?: boolean }) {
+type WristbandProps = { color?: string; mascot?: string; mood?: MascotMood; big: ReactNode; sub?: ReactNode; mine?: boolean };
+
+/** Armbandet överst: vems skärm det är just nu. Spelas in på nytt när innehållet byts. Maskoten sitter där knappen satt. */
+function Wristband({ color, mascot, mood = 'idle', big, sub, mine = false }: WristbandProps) {
+  const pinned = Boolean(getMascot(mascot));
   return (
     <header
       key={`${color}-${typeof big === 'string' ? big : ''}`}
-      className={`wristband${mine ? ' mine' : ''}`}
+      className={`wristband${mine ? ' mine' : ''}${pinned ? ' pinned' : ''}`}
       style={color ? { backgroundColor: color, color: textOn(color) } : undefined}
       role="status"
     >
       <h1 className="wristband-big">{big}</h1>
       {sub && <div className="wristband-sub">{sub}</div>}
+      {pinned && <MascotPin mascot={mascot} mood={mood} animate className="wristband-pin" />}
     </header>
   );
 }
@@ -112,6 +128,8 @@ function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = []
         const style = { backgroundColor: t.color, color: textOn(t.color) };
         const content = (
           <>
+            {/* Under spelet behöver namnet och räknaren hela bredden. */}
+            {!showCount && <MascotPin mascot={t.mascot} />}
             <span className="band-name">
               {t.name}
               {offline && <span className="band-off">offline</span>}
@@ -147,7 +165,8 @@ function winnerTitle(game: GameDoc, teams: Team[], myUid: string): string {
   return names.length ? `${names.join(' och ')} vann` : 'Spelet är slut';
 }
 
-function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
+function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Team; teams: Team[] }) {
+  const family = gameMode(game) === 'family';
   const now = useNow();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +191,8 @@ function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
     <FestPage>
       <Wristband
         color={me.color}
+        mascot={me.mascot}
+        mood="happy"
         mine
         big="Ni är med!"
         sub={
@@ -186,17 +207,30 @@ function Lobby({ code, me, teams }: { code: string; me: Team; teams: Team[] }) {
       {editing && (
         <ProfileForm
           initialName={me.name}
-          initialColor={me.color}
-          takenColors={teams.filter((t) => t.uid !== me.uid).map((t) => t.color)}
+          // Ett lag från före maskotarna får maskoten med samma färg, så att det ser ut som förut.
+          initialMascot={getMascot(me.mascot)?.id ?? MASCOTS.find((m) => m.color === me.color)?.id}
+          takenMascots={teams.filter((t) => t.uid !== me.uid).flatMap((t) => (t.mascot ? [t.mascot] : []))}
           submitLabel="Spara"
-          onSubmit={(name, color) => {
-            updateProfile(code, me.uid, name, color)
+          onSubmit={(name, mascot) => {
+            updateProfile(code, me.uid, name, mascot)
               .then(() => setEditing(false))
               .catch((err) => setError(errorMessage(err)));
           }}
         />
       )}
       <ErrorText error={error} />
+      {/* Även lag som gick med innan spelledaren valde Familj ska se nivåvalet direkt, inte bakom Ändra. */}
+      {family && (
+        <div className="card-box">
+          <ChoiceCards
+            legend="Familj-läget: välj nivå"
+            name="level"
+            options={LEVELS}
+            value={teamLevel(me)}
+            onChange={(level) => void setLevel(code, me.uid, level).catch((err) => setError(errorMessage(err)))}
+          />
+        </div>
+      )}
       <p className="hint">Väntar på att spelledaren startar spelet…</p>
       <h2>Lag ({teams.length})</h2>
       <Bands teams={teams} now={now} showCount={false} shownUid={me.uid} />
@@ -208,6 +242,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const now = useNow();
   const move = useDoc<MoveDoc>(moveRef(code, game.turnIndex));
   const [slot, setSlot] = useState<number | null>(null);
+  const [pick, setPick] = useState<number | null>(null);
   const [slotTurn, setSlotTurn] = useState(game.turnIndex);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -219,6 +254,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   if (slotTurn !== game.turnIndex) {
     setSlotTurn(game.turnIndex);
     setSlot(null);
+    setPick(null);
     setError(null);
     setViewUid(null);
   }
@@ -226,7 +262,10 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const current = teams.find((t) => t.uid === game.currentTeamUid);
   const myTurn = game.currentTeamUid === me.uid;
   const locked = Boolean(move.data);
-  const canPlace = myTurn && game.phase === 'placing' && !locked && !move.loading;
+  // Familj: ett lätt lag väljer artist i stället för lucka, och alla andra får gissa med.
+  const byArtist = myTurn && gameMode(game) === 'family' && teamLevel(me) === 'easy';
+  const canPlace = myTurn && !byArtist && game.phase === 'placing' && !locked && !move.loading;
+  const canPick = byArtist && game.phase === 'placing' && !locked && !move.loading;
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const shownUid = viewUid ?? (myTurn ? me.uid : game.currentTeamUid ?? me.uid);
   const shown = teams.find((t) => t.uid === shownUid) ?? me;
@@ -237,11 +276,12 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   };
 
   const lock = async () => {
-    if (slot === null) return;
+    if (byArtist ? pick === null : slot === null) return;
     setBusy(true);
     setError(null);
     try {
-      await lockMove(code, me.uid, game.turnIndex, slot);
+      if (byArtist) await lockChoice(code, me.uid, game.turnIndex, pick!);
+      else await lockMove(code, me.uid, game.turnIndex, slot!);
     } catch (err) {
       setError(`Kunde inte låsa: ${errorMessage(err)}`);
     } finally {
@@ -260,20 +300,23 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const resultTeam = result ? teams.find((t) => t.uid === result.teamUid) : undefined;
   const resultMine = result?.teamUid === me.uid;
   const lockedText = 'Låst här';
+  const showChoices = showsChoices(game, myTurn, byArtist);
 
   return (
     <FestPage>
       {result ? (
         <Wristband
           color={resultTeam?.color}
+          mascot={resultTeam?.mascot}
+          mood={result.correct ? 'happy' : 'sad'}
           mine={resultMine}
           big={result.correct ? 'Rätt!' : 'Fel!'}
           sub={`${resultMine ? 'Ni' : (resultTeam?.name ?? 'Laget')} ${result.correct ? 'fick kortet' : 'missade'}`}
         />
       ) : myTurn ? (
-        <Wristband color={me.color} mine big="Er tur!" sub={me.name} />
+        <Wristband color={me.color} mascot={me.mascot} mine big="Er tur!" sub={me.name} />
       ) : (
-        <Wristband color={current?.color} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
+        <Wristband color={current?.color} mascot={current?.mascot} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
       )}
 
       <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} />
@@ -299,6 +342,10 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         ) : myTurn && game.phase === 'placing' ? (
           locked ? (
             'Låst! Väntar på att spelledaren avslöjar.'
+          ) : byArtist ? (
+            <>
+              Lyssna och tryck på artisten som sjunger. <strong>Tryck sedan Lås.</strong>
+            </>
           ) : (
             <>
               Lyssna och tryck på luckan där låten passar. <strong>Tryck sedan Lås.</strong>
@@ -309,7 +356,20 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         ) : null}
       </p>
 
-      {shown.uid !== me.uid && shown.uid !== game.currentTeamUid && <h2>{genitive(shown.name)} tidslinje</h2>}
+      <FamilyRound
+        code={code}
+        game={game}
+        me={me}
+        myTurn={myTurn}
+        byArtist={byArtist}
+        pick={move.data?.choice ?? pick}
+        onPick={canPick ? setPick : undefined}
+      />
+
+      {/* Med alternativen ovanför behöver tidslinjen alltid en rubrik, annars ser första kortet ut som ett alternativ. */}
+      {(showChoices || (shown.uid !== me.uid && shown.uid !== game.currentTeamUid)) && (
+        <h2>{shown.uid === me.uid ? 'Er tidslinje' : `${genitive(shown.name)} tidslinje`}</h2>
+      )}
 
       <TicketTimeline
         cards={shown.timeline ?? []}
@@ -321,6 +381,13 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       />
 
       <ErrorText error={error} />
+      {canPick && (
+        <div className="sticky-actions">
+          <button type="button" className="lock" disabled={pick === null || busy} onClick={lock}>
+            {pick === null ? 'Välj en artist' : busy ? 'Låser…' : 'Lås'}
+          </button>
+        </div>
+      )}
       {canPlace && (
         <div className="sticky-actions">
           {shown.uid !== me.uid ? (

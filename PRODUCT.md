@@ -11,7 +11,7 @@ web
 The Kriken crew, a private friend group, playing together in one room on a game night. Two roles:
 
 - **Spelledare (host):** one person with Spotify Premium who runs the game from their phone. That phone plays the music into a speaker, starts the turns, reveals the answers and moves the game along.
-- **Lag (teams):** 2–10 teams of friends, each playing from one of their own phones with no account. They join with a 6-digit code or a QR code, pick a team name and colour, listen, and place the song in their timeline.
+- **Lag (teams):** 2–10 teams of friends, each playing from one of their own phones with no account. They join with a 6-digit code or a QR code, pick a team name and a mascot (which brings the team colour), listen, and place the song in their timeline.
 
 The game is not intended for anyone outside the group. Future Kriken game nights may reuse it.
 
@@ -34,9 +34,11 @@ The crew's own game. It is named for the group, it uses a song list the group ch
 
 ## Capabilities and Constraints
 
-- Routes: `/` (join with a code or create a game), `/host` (Spotify login, create or continue), `/host/:code` (lobby with QR, turns, music, reveal, results), `/host/songs` (match songs to Spotify, preview, export JSON), `/join/:code` (team name and colour), `/play/:code` (lobby, timeline, place and lock).
+- Routes: `/` (join with a code or create a game), `/host` (Spotify login, create or continue), `/host/:code` (lobby with QR, turns, music, reveal, results), `/host/songs` (match songs to Spotify, preview, export JSON), `/join/:code` (team name and mascot), `/play/:code` (lobby, timeline, place and lock).
 - Stack: React 19, Vite, TypeScript, React Router, Firebase (Firestore with anonymous auth, Hosting), Spotify Web Playback SDK with PKCE. Live at https://krikensongguessr.web.app.
 - The host needs Spotify Premium. Teams need nothing.
+- Game modes, picked by the host in the lobby: **Tidslinje** (everyone places the song in their timeline by year) and **Familj** (for kids 9–14 playing with parents). In Familj each team picks a level when it joins: *Lätt* picks the artist among four, *Svår* places in the timeline. A Lätt team that picks right gets the card in year order, so everyone still races to the same number of cards. The teams whose turn it isn't can guess the artist too; it gives no cards, only the mascot's reaction. More modes are expected, so the mode is a setting rather than a separate route.
+- When resolving a song on Spotify the host's phone prefers a clean (non-explicit) version when one exists.
 - Song list: `src/data/songs.json`, 65 songs with title, artist and original year, spanning from 1964 onwards.
 - Host actions include skipping a team (discard the card and draw a new one) and playing again (same code and teams, back to the lobby).
 - Installable through the web manifest. There is deliberately no service worker, so each new deploy shows up immediately.

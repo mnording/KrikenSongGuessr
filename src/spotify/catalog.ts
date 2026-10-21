@@ -1,5 +1,6 @@
 // Låtlistan och hur den kopplas till Spotify-URI:er.
 // songs.json kan sakna URI. Då söker spelledarens telefon fram spåret och sparar svaret lokalt.
+import { normalizeName as normalize } from '../engine/artist';
 import type { Song } from '../engine/game';
 import { spotifyFetch } from './auth';
 
@@ -34,6 +35,8 @@ type SpotifyImage = { url: string; width: number | null; height: number | null }
 type SearchTrack = {
   uri: string;
   name: string;
+  /** Spåret har svordomar. Finns en ren version väljs den. */
+  explicit?: boolean;
   artists: { name: string }[];
   album?: { name: string; release_date?: string; images?: SpotifyImage[] };
 };
@@ -44,14 +47,6 @@ function pickImage(images: SpotifyImage[] | undefined): string | null {
   return (images.find((i) => (i.width ?? 0) <= 300) ?? images[images.length - 1]).url;
 }
 
-const normalize = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-
 export async function searchTracks(query: string, limit = 5): Promise<SearchTrack[]> {
   const params = new URLSearchParams({ q: query, type: 'track', limit: String(limit), market: 'from_token' });
   const res = await spotifyFetch(`/search?${params}`);
@@ -60,7 +55,7 @@ export async function searchTracks(query: string, limit = 5): Promise<SearchTrac
   return (data.tracks?.items ?? []).filter((t): t is SearchTrack => t !== null);
 }
 
-/** Väljer en träff där artisten stämmer och titeln inte är en liveversion eller remix. */
+/** Väljer en träff där artisten stämmer och titeln inte är en liveversion eller remix, helst utan svordomar. */
 function pickBest(song: Song, tracks: SearchTrack[]): SearchTrack | null {
   const artist = normalize(song.artist);
   const title = normalize(song.title);
@@ -75,7 +70,8 @@ function pickBest(song: Song, tracks: SearchTrack[]): SearchTrack | null {
     if (bad.test(name) && !bad.test(title)) score -= 3;
     return { t, score };
   });
-  scored.sort((a, b) => b.score - a.score);
+  // Lika bra träffar: den rena versionen först.
+  scored.sort((a, b) => b.score - a.score || Number(a.t.explicit ?? false) - Number(b.t.explicit ?? false));
   return scored[0] && scored[0].score >= 3 ? scored[0].t : null;
 }
 
@@ -83,7 +79,8 @@ export async function resolveUri(song: Song): Promise<string> {
   if (song.spotifyUri) return song.spotifyUri;
   const cached = readCache()[song.id];
   if (cached) return cached;
-  const exact = await searchTracks(`track:"${song.title}" artist:"${song.artist}"`);
+  // Tio träffar, så att en ren version har chans att komma med.
+  const exact = await searchTracks(`track:"${song.title}" artist:"${song.artist}"`, 10);
   let best = pickBest(song, exact);
   if (!best) best = pickBest(song, await searchTracks(`${song.title} ${song.artist}`));
   if (!best) throw new Error(`Hittade inte "${song.title}" med ${song.artist} på Spotify`);
