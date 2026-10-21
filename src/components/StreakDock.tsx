@@ -4,6 +4,7 @@ import { STREAK_TAP_GUARD_MS, STREAK_UNDO_MS } from '../game/modes';
 import { chooseStreak, undoStreak } from '../game/teamActions';
 import type { StreakAction, TeamDoc } from '../game/types';
 import { useNow } from '../hooks/misc';
+import { useT } from '../i18n/context';
 import { errorMessage } from '../util';
 import { ErrorText } from './Common';
 
@@ -19,15 +20,8 @@ type Props = {
   record: TeamDoc['streakChoice'];
 };
 
-/** Vad ett fel kostar, i klartext: "båda" för två kort låter bättre än "alla 2". */
-const lossText = (risk: number) => (risk === 1 ? 'Fel svar: ni tappar kortet' : risk === 2 ? 'Fel svar: ni tappar båda' : `Fel svar: ni tappar alla ${risk}`);
-
-const STATUS: Record<StreakAction, string> = {
-  continue: 'Ni fortsätter. Nästa låt kommer…',
-  lock: 'Ni låste in. Turen går vidare…',
-};
-
 export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props) {
+  const { t } = useT();
   const now = useNow(250);
   // Dockan dyker upp där Lås nyss satt. Ett reflextryck de första ögonblicken ska inte bli ett val.
   const [armed, setArmed] = useState(false);
@@ -39,6 +33,7 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
   const swapped = useRef(false);
   const afterUndo = record?.action === 'undone';
   const canUndo = Boolean(chosen && record && !record.undone);
+  const status: Record<StreakAction, string> = { continue: t.streak.continuing, lock: t.streak.lockedIn };
 
   useEffect(() => {
     const timer = setTimeout(() => setArmed(true), STREAK_TAP_GUARD_MS);
@@ -63,7 +58,7 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
       await chooseStreak(code, uid, turnIndex, action, afterUndo);
     } catch (err) {
       setPressedAt(null);
-      setError(`Det gick inte att välja: ${errorMessage(err)}`);
+      setError(t.streak.failed(errorMessage(err)));
     } finally {
       setBusy(false);
     }
@@ -77,7 +72,7 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
       setPressedAt(null);
     } catch (err) {
       // Nekad betyder att fönstret har stängt. Annat är oftast nätet, och då går det att försöka igen.
-      setError((err as { code?: string }).code === 'permission-denied' ? 'För sent att ångra.' : 'Det gick inte. Försök igen.');
+      setError((err as { code?: string }).code === 'permission-denied' ? t.streak.tooLate : t.streak.retry);
     } finally {
       setBusy(false);
     }
@@ -85,13 +80,12 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
 
   const from = pressedAt ?? record?.at?.toMillis() ?? now;
   const left = Math.ceil((from + STREAK_UNDO_MS - now) / 1000);
-  const status = chosen ? STATUS[chosen] : '';
 
   return (
     <div className="sticky-actions">
       {/* Finns hela tiden, så att skärmläsaren läser upp när valet ändras. */}
       <p className="visually-hidden" role="status">
-        {status}
+        {chosen ? status[chosen] : ''}
       </p>
       {chosen ? (
         <div className="undo-dock">
@@ -100,17 +94,18 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
               ref={undoButton}
               type="button"
               className="undo"
-              aria-label={`Ångra: ${chosen === 'continue' ? 'fortsätt' : 'lås in'}`}
+              aria-label={t.streak.undoLabel(chosen === 'continue' ? t.streak.keepGoing : t.streak.lockIn)}
               disabled={busy}
               onClick={() => void undo()}
             >
               <span aria-hidden="true">
-                {chosen === 'continue' ? 'Fortsätter' : 'Inlåst'} · ↩ Ångra ({Math.min(left, STREAK_UNDO_MS / 1000)})
+                {chosen === 'continue' ? t.streak.chipContinue : t.streak.chipLock} · ↩ {t.undo.undo} (
+                {Math.min(left, STREAK_UNDO_MS / 1000)})
               </span>
             </button>
           ) : (
             <p className="hint" aria-hidden="true">
-              {STATUS[chosen]}
+              {status[chosen]}
             </p>
           )}
           <ErrorText error={error} />
@@ -125,11 +120,11 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
             disabled={busy}
             onClick={(e) => void choose('lock', e.timeStamp)}
           >
-            <span className="choice-word">Lås in</span>
-            <span className="choice-note">{risk === 1 ? 'Kortet blir ert' : `${risk} kort blir era`}</span>
+            <span className="choice-word">{t.streak.lockIn}</span>
+            <span className="choice-note">{t.streak.banked(risk)}</span>
           </button>
           <span className="choice-or" aria-hidden="true">
-            eller
+            {t.streak.or}
           </span>
           <button
             type="button"
@@ -138,10 +133,10 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
             disabled={busy}
             onClick={(e) => void choose('continue', e.timeStamp)}
           >
-            <span className="choice-word">Fortsätt</span>
-            <span className="choice-note">{lossText(risk)}</span>
+            <span className="choice-word">{t.streak.keepGoing}</span>
+            <span className="choice-note">{t.streak.loss(risk)}</span>
           </button>
-          {afterUndo && <p className="choice-last">Sista valet, det går inte att ångra igen.</p>}
+          {afterUndo && <p className="choice-last">{t.streak.lastChoice}</p>}
           <ErrorText error={error} />
         </div>
       )}

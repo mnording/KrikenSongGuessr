@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FAST_UNDO_MS } from '../game/modes';
 import { undoMove } from '../game/teamActions';
 import { useNow } from '../hooks/misc';
+import { useT } from '../i18n/context';
 
 type Props = {
   code: string;
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function UndoDock({ code, turnIndex, lockedAt, onUndone }: Props) {
+  const { t } = useT();
   const now = useNow(250);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export function UndoDock({ code, turnIndex, lockedAt, onUndone }: Props) {
     setBusy(true);
     undoMove(code, turnIndex)
       .then(onUndone)
-      .catch(() => setError('För sent att ångra. Svaret visas strax.'))
+      .catch(() => setError(t.undo.tooLate))
       .finally(() => setBusy(false));
   };
 
@@ -31,11 +33,13 @@ export function UndoDock({ code, turnIndex, lockedAt, onUndone }: Props) {
       <div className="undo-dock">
         {error || left <= 0 ? (
           <p className="hint" role="status">
-            {error ?? 'Ångra-tiden är slut. Svaret visas strax.'}
+            {error ?? t.undo.timeUp}
           </p>
         ) : (
-          <button type="button" className="undo" aria-label="Ångra" disabled={busy} onClick={undo}>
-            <span aria-hidden="true">↩ Ångra ({Math.min(left, FAST_UNDO_MS / 1000)})</span>
+          <button type="button" className="undo" aria-label={t.undo.undo} disabled={busy} onClick={undo}>
+            <span aria-hidden="true">
+              ↩ {t.undo.undo} ({Math.min(left, FAST_UNDO_MS / 1000)})
+            </span>
           </button>
         )}
       </div>

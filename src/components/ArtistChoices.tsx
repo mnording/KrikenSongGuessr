@@ -1,6 +1,7 @@
 // De fyra artisterna i Familj-läget, som biljettremsor. Bokstäverna gör det lätt att ropa ut svaret.
 import { useId } from 'react';
 import { LETTERS } from '../game/modes';
+import { useT } from '../i18n/context';
 
 type Props = {
   choices: string[];
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function ArtistChoices({ choices, label, selected, answer = null, onSelect, locked = false }: Props) {
+  const { t } = useT();
   const headingId = useId();
   const revealed = answer !== null;
   return (
@@ -40,10 +42,10 @@ export function ArtistChoices({ choices, label, selected, answer = null, onSelec
                   {LETTERS[i]}
                 </span>
                 <span className="choice-name">{artist}</span>
-                {right && <span className="choice-tag">Rätt svar</span>}
-                {wrong && <span className="choice-tag">Ert val</span>}
-                {locked && picked && !revealed && <span className="choice-tag">Låst</span>}
-                {picked && right && <span className="visually-hidden"> (ert val)</span>}
+                {right && <span className="choice-tag">{t.family.rightAnswer}</span>}
+                {wrong && <span className="choice-tag">{t.family.yourPick}</span>}
+                {locked && picked && !revealed && <span className="choice-tag">{t.family.locked}</span>}
+                {picked && right && <span className="visually-hidden"> ({t.family.yourPick.toLowerCase()})</span>}
               </button>
             </li>
           );

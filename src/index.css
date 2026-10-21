@@ -1211,3 +1211,29 @@ h3.step-head {
     transition: none;
   }
 }
+
+/* ── Språkväljaren på lagens sidor ── */
+
+.lang-switch {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 24px 0 8px;
+}
+
+.lang-switch button {
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.lang-switch button[aria-pressed='true'] {
+  border-color: var(--text);
+  color: var(--text);
+  font-weight: 700;
+}

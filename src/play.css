@@ -921,3 +921,14 @@
   font-size: 0.9rem;
   text-align: center;
 }
+
+/* Språkväljaren är inget man trycker på mitt i spelet, så den får inte lime: papper på natt i stället. */
+.fest .lang-switch button {
+  border-color: var(--night-3);
+  color: var(--fest-muted);
+}
+
+.fest .lang-switch button[aria-pressed='true'] {
+  border-color: var(--fest-text);
+  color: var(--fest-text);
+}

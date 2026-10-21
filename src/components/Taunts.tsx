@@ -1,4 +1,5 @@
 // Pikarna: knappen och listan för lagen som väntar, och lappen som visas på allas skärmar.
+// Bara pikens id sparas, så att varje telefon visar den på sitt eget språk.
 import { useState } from 'react';
 import { getMascot } from '../game/mascots';
 import { sendTaunt } from '../game/teamActions';
@@ -7,6 +8,7 @@ import { isStreak, streakChoiceFor } from '../game/modes';
 import { canContinue } from '../engine/streak';
 import type { GameDoc, Team } from '../game/types';
 import { useNow } from '../hooks/misc';
+import { useT } from '../i18n/context';
 import { errorMessage, textOn } from '../util';
 import { ErrorText } from './Common';
 import { MascotPin } from './Mascot';
@@ -18,6 +20,7 @@ type Shown = { key: string; team: Team; text: string; id: string };
  * Pikar som fanns när skärmen öppnades visas inte igen.
  */
 export function TauntToasts({ game, teams, inline = false }: { game: GameDoc; teams: Team[]; inline?: boolean }) {
+  const { t } = useT();
   const now = useNow(500);
   // När varje pik först syntes här, i den här telefonens tid. 0 betyder att den var gammal redan då.
   const [seen, setSeen] = useState<Record<string, number> | null>(null);
@@ -25,23 +28,23 @@ export function TauntToasts({ game, teams, inline = false }: { game: GameDoc; te
   const current: Shown[] = teams.flatMap((team) => {
     const taunt = team.taunt;
     if (!taunt?.at || taunt.turnIndex !== game.turnIndex) return [];
-    const text = tauntText(taunt.id, team);
+    const text = tauntText(taunt.id, team, t.taunts);
     return text ? [{ key: `${team.uid}-${taunt.at.toMillis()}`, team, text, id: taunt.id }] : [];
   });
 
   if (seen === null) {
     // Första renderingen: det som redan finns är gammalt.
-    setSeen(Object.fromEntries(current.map((t) => [t.key, 0])));
+    setSeen(Object.fromEntries(current.map((s) => [s.key, 0])));
   } else {
-    const fresh = current.filter((t) => !(t.key in seen));
-    if (fresh.length > 0) setSeen({ ...seen, ...Object.fromEntries(fresh.map((t) => [t.key, now])) });
+    const fresh = current.filter((s) => !(s.key in seen));
+    if (fresh.length > 0) setSeen({ ...seen, ...Object.fromEntries(fresh.map((s) => [s.key, now])) });
   }
 
-  const visible = current.filter((t) => seen?.[t.key] && now - seen[t.key] < tauntShownMs(t.text)).slice(-2);
+  const visible = current.filter((s) => seen?.[s.key] && now - seen[s.key] < tauntShownMs(s.text)).slice(-2);
   // En reaktion från ett annat lag säger vem den gäller, så att den inte blandas ihop med svaret på den.
-  const resultTeam = teams.find((t) => t.uid === game.lastResult?.teamUid);
+  const resultTeam = teams.find((team) => team.uid === game.lastResult?.teamUid);
   const target = (id: string, from: Team) =>
-    isReaction(id) && resultTeam && resultTeam.uid !== from.uid ? ` till ${resultTeam.name}` : '';
+    isReaction(id) && resultTeam && resultTeam.uid !== from.uid ? t.tauntDock.to(resultTeam.name) : '';
   return (
     <div className={`taunts${inline ? ' inline' : ''}`} aria-live="polite">
       {visible.map(({ key, team, text, id }) => (
@@ -63,6 +66,7 @@ export function TauntToasts({ game, teams, inline = false }: { game: GameDoc; te
  */
 /** chooser: laget som väljer att fortsätta eller låsa in, så att hetsen slutar när det har valt. */
 export function TauntDock({ code, game, me, chooser }: { code: string; game: GameDoc; me: Team; chooser?: Team }) {
+  const { t } = useT();
   const now = useNow(500);
   const [open, setOpen] = useState(false);
   const [sentAt, setSentAt] = useState(0);
@@ -72,7 +76,8 @@ export function TauntDock({ code, game, me, chooser }: { code: string; game: Gam
   const last = Math.max(sentAt, me.taunt?.at?.toMillis() ?? 0);
   // useNow tickar varannan halvsekund, så klockan kan ligga lite efter tryckningen.
   const wait = Math.min(TAUNT_COOLDOWN_MS / 1000, Math.ceil((last + TAUNT_COOLDOWN_MS - now) / 1000));
-  const signature = getMascot(me.mascot)?.signature;
+  const mascot = getMascot(me.mascot);
+  const signature = mascot ? t.taunts.signatures[mascot.id] : undefined;
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const reactions = result ? REACTIONS.filter((r) => r.kind === reactionKind(result.teamUid === me.uid, result.correct)) : null;
   // Fortsätt eller lås: medan ett annat lag väljer kan man hetsa det åt något håll.
@@ -88,10 +93,10 @@ export function TauntDock({ code, game, me, chooser }: { code: string; game: Gam
     sendTaunt(code, me.uid, game.turnIndex, id).catch((err) => {
       // Nekad betyder oftast att spärren eller turen tog slut. Då står nedräkningen kvar.
       if ((err as { code?: string }).code === 'permission-denied') {
-        setError('Det gick inte fram. Rundan kan ha gått vidare, eller så behöver ni vänta lite.');
+        setError(t.tauntDock.notThrough);
       } else {
         setSentAt(0);
-        setError(`Piken gick inte fram: ${errorMessage(err)}`);
+        setError(t.tauntDock.failed(errorMessage(err)));
       }
     });
   };
@@ -101,19 +106,19 @@ export function TauntDock({ code, game, me, chooser }: { code: string; game: Gam
       <div className="taunt-dock">
         <ErrorText error={error} />
         {open && (
-          <ul className="taunt-options" aria-label={reactions ? 'Välj en reaktion' : 'Välj en pik'}>
+          <ul className="taunt-options" aria-label={reactions ? t.tauntDock.pickReaction : t.tauntDock.pickTaunt}>
             {egging &&
-              DECISION_TAUNTS.map((t) => (
-                <li key={t.id}>
-                  <button type="button" onClick={(e) => send(t.id, e.timeStamp)}>
-                    {t.text}
+              DECISION_TAUNTS.map((d) => (
+                <li key={d.id}>
+                  <button type="button" onClick={(e) => send(d.id, e.timeStamp)}>
+                    {t.taunts.taunts[d.id]}
                   </button>
                 </li>
               ))}
             {reactions?.map((r) => (
               <li key={r.id}>
                 <button type="button" onClick={(e) => send(r.id, e.timeStamp)}>
-                  {r.text}
+                  {t.taunts.taunts[r.id]}
                 </button>
               </li>
             ))}
@@ -126,10 +131,10 @@ export function TauntDock({ code, game, me, chooser }: { code: string; game: Gam
               </li>
             )}
             {!reactions &&
-              TAUNTS.map((t) => (
-                <li key={t.id}>
-                  <button type="button" onClick={(e) => send(t.id, e.timeStamp)}>
-                    {t.text}
+              TAUNTS.map((p) => (
+                <li key={p.id}>
+                  <button type="button" onClick={(e) => send(p.id, e.timeStamp)}>
+                    {t.taunts.taunts[p.id]}
                   </button>
                 </li>
               ))}
@@ -137,14 +142,16 @@ export function TauntDock({ code, game, me, chooser }: { code: string; game: Gam
         )}
         <button type="button" className="taunt-open" aria-expanded={open} disabled={wait > 0} onClick={() => setOpen((v) => !v)}>
           {wait > 0
-            ? `${reactions && !egging ? 'Reagera' : 'Pika'} igen om ${wait} s`
+            ? reactions && !egging
+              ? t.tauntDock.reactAgain(wait)
+              : t.tauntDock.tauntAgain(wait)
             : open
-              ? 'Stäng'
+              ? t.close
               : egging
-                ? '😏 Hetsa dem'
+                ? t.tauntDock.egg
                 : reactions
-                  ? '🎉 Reagera'
-                  : '😏 Skicka en pik'}
+                  ? t.tauntDock.react
+                  : t.tauntDock.send}
         </button>
       </div>
     </div>

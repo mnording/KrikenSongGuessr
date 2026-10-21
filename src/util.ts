@@ -21,13 +21,27 @@ export function textOn(hex: string): string {
   return 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.059 ? '#fff' : '#0f172a';
 }
 
+export type SlotTexts = {
+  first: string;
+  before: (year: number) => string;
+  after: (year: number) => string;
+  between: (from: number, to: number) => string;
+};
+
+export const SV_SLOTS: SlotTexts = {
+  first: 'Första kortet',
+  before: (year) => `Före ${year}`,
+  after: (year) => `Efter ${year}`,
+  between: (from, to) => `Mellan ${from} och ${to}`,
+};
+
 /** Beskrivning av en lucka i tidslinjen, till exempel "Mellan 1966 och 1977". */
-export function slotLabel(cards: TimelineCard[], index: number): string {
+export function slotLabel(cards: TimelineCard[], index: number, texts: SlotTexts = SV_SLOTS): string {
   const left = cards[index - 1];
   const right = cards[index];
-  if (!left && !right) return 'Första kortet';
-  if (!left) return `Före ${right.year}`;
-  if (!right) return `Efter ${left.year}`;
-  return `Mellan ${left.year} och ${right.year}`;
+  if (!left && !right) return texts.first;
+  if (!left) return texts.before(right.year);
+  if (!right) return texts.after(left.year);
+  return texts.between(left.year, right.year);
 }
 

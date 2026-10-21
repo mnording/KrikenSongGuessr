@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Screen } from '../components/Common';
+import { useT } from '../i18n/context';
+import { LangSwitch } from '../i18n/LangSwitch';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useT();
   const [code, setCode] = useState('');
   const valid = /^\d{6}$/.test(code);
 
@@ -14,11 +17,11 @@ export default function Home() {
 
   return (
     <Screen title="Kriken Låtgissning">
-      <p className="lead">Lyssna på låten och lägg den rätt i er tidslinje. Först till sju kort vinner.</p>
+      <p className="lead">{t.home.lead}</p>
 
       <form className="card-box" onSubmit={join}>
-        <h2>Gå med i ett spel</h2>
-        <label htmlFor="code">Spelkod</label>
+        <h2>{t.home.joinTitle}</h2>
+        <label htmlFor="code">{t.home.codeLabel}</label>
         <input
           id="code"
           className="code-input"
@@ -30,17 +33,19 @@ export default function Home() {
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
         />
         <button type="submit" className="primary" disabled={!valid}>
-          Gå med
+          {t.join}
         </button>
       </form>
 
       <div className="card-box">
-        <h2>Spelledare</h2>
-        <p className="muted">Du behöver Spotify Premium. Musiken spelas från din telefon.</p>
+        <h2>{t.home.hostTitle}</h2>
+        <p className="muted">{t.home.hostText}</p>
         <Link to="/host" className="button">
-          Skapa spel
+          {t.home.createGame}
         </Link>
       </div>
+
+      <LangSwitch />
     </Screen>
   );
 }

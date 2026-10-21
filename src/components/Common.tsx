@@ -3,6 +3,7 @@ import { leaders } from '../engine/game';
 import { gameMode, isOnline, teamLevel, type GameDoc, type Team } from '../game/types';
 import { getMascot } from '../game/mascots';
 import { MascotPin } from './Mascot';
+import { useT } from '../i18n/context';
 
 export function TeamDot({ color }: { color: string }) {
   return <span className="team-dot" style={{ background: color }} aria-hidden="true" />;
@@ -61,10 +62,11 @@ export function ErrorText({ error }: { error: string | null | undefined }) {
   );
 }
 
-export function Loading({ text = 'Laddar…' }: { text?: string }) {
+export function Loading({ text }: { text?: string }) {
+  const { t } = useT();
   return (
     <main className="screen">
-      <p className="muted">{text}</p>
+      <p className="muted">{text ?? t.loading}</p>
     </main>
   );
 }
