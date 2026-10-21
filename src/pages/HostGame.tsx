@@ -176,6 +176,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
           }
         />
         <ErrorText error={error ?? player.error} />
+        {player.status === 'error' && <Link to="/host/guide" className="link">Hjälp med Spotify</Link>}
       </main>
     );
   }

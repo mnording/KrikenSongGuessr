@@ -22,6 +22,15 @@ Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 - `http://127.0.0.1:5173/callback` (utveckling)
 - `https://<tunnel>/callback` om du kör via ngrok
 
+## Fler spelledare
+
+Spotify-appen är i Development Mode. Sedan mars 2026 betyder det högst fem Spotify-konton, inklusive ägarens, och ägaren måste ha Premium. Extended quota kräver ett företag med 250 000 aktiva användare i månaden, så den vägen är stängd. Ett konto som inte är tillagt kommer igenom inloggningen men får 403 på allt. `/callback` kollar därför `GET /me`, loggar ut vid 403 och skickar spelledaren till `/host/guide?nekad`.
+
+`/host/guide` visar två vägar:
+
+1. **Bli tillagd i Kriken-appen.** Spelledaren skickar namn och Spotify-e-post. Lägg till dem i [Spotifys dashboard](https://developer.spotify.com/dashboard) under appen → Settings → User Management. Det finns inget API för det.
+2. **Egen Spotify-app.** Spelledaren skapar en egen app i dashboarden, med vår Redirect URI och Web API + Web Playback SDK, och klistrar in sitt Client ID. ID:t sparas bara i telefonens `localStorage` (`spotify.clientId`, se `src/spotify/auth.ts`). PKCE behöver ingen hemlighet. När appen byts loggas spelledaren ut, eftersom inloggningen hör till appen. Den egna appen har sin egen kvot hos Spotify. Guiden minns var spelledaren är (`guide.step`, `guide.clientId`) om fliken laddas om under besöket hos Spotify. Ett ID sparas som `spotify.clientId` först när inloggningen med det har fungerat, och en nekad inloggning återställer den som fanns innan, så att en felaktig länk aldrig loggar ut en spelledare mitt i spelet. På datorn visar guiden till sist en QR-kod (`/host/guide?app=<id>`) som för över appen till telefonen.
+
 ## Vyer
 
 | Sökväg | Vem | Vad |
@@ -30,6 +39,7 @@ Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 | `/host` | Spelledare | Spotify-inloggning, skapa eller fortsätt spel |
 | `/host/:code` | Spelledare | Lobby med QR, turer, musik, avslöja, resultat |
 | `/host/songs` | Spelledare | Koppla låtar till Spotify, provspela, exportera JSON |
+| `/host/guide` | Ny spelledare | Bli tillagd i Kriken-appen eller använd en egen Spotify-app |
 | `/join/:code` | Lag | Lagnamn och maskot |
 | `/play/:code` | Lag | Lobby, tidslinje, placera och lås |
 
