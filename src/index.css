@@ -924,6 +924,8 @@ label {
 .risk-count {
   color: var(--muted);
   font-weight: 600;
+}
+
 input::placeholder {
   color: var(--muted);
   opacity: 1;
