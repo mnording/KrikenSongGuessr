@@ -1,5 +1,6 @@
 // Web Playback SDK-spelaren lever på modulnivå, utanför React-trädet.
 // Den skapas en gång, överlever HMR via import.meta.hot.data och påverkas inte av StrictMode.
+import { reportError, spotifyError } from '../sentry';
 import { getAccessToken, spotifyFetch } from './auth';
 
 export type PlayerSnapshot = {
@@ -80,7 +81,10 @@ export async function initPlayer(): Promise<void> {
     getOAuthToken: (callback) => {
       getAccessToken()
         .then(callback)
-        .catch((err) => update({ status: 'error', error: String(err) }));
+        .catch((err) => {
+          reportError(err, 'spotify.token');
+          update({ status: 'error', error: String(err) });
+        });
     },
   });
   store.player = player;
@@ -96,16 +100,27 @@ export async function initPlayer(): Promise<void> {
     update({ paused: state.paused, trackUri: state.track_window?.current_track?.uri ?? null });
   });
   player.addListener('autoplay_failed', () => update({ needsGesture: true }));
-  const onError = ({ message }: { message: string }) => update({ status: 'error', error: message });
-  player.addListener('initialization_error', onError);
-  player.addListener('authentication_error', onError);
-  player.addListener('account_error', ({ message }) =>
-    update({ status: 'error', error: `Spotify Premium krävs. ${message}` }),
-  );
-  player.addListener('playback_error', ({ message }) => update({ error: message }));
+  // SDK:ns fel är bara text i ett event, inga kastade fel, så Sentry får dem härifrån.
+  const onError = (event: string) => ({ message }: { message: string }) => {
+    reportError(spotifyError(event, message), `spotify.${event}`);
+    update({ status: 'error', error: message });
+  };
+  player.addListener('initialization_error', onError('initialization_error'));
+  player.addListener('authentication_error', onError('authentication_error'));
+  player.addListener('account_error', ({ message }) => {
+    reportError(spotifyError('account_error', message), 'spotify.account_error');
+    update({ status: 'error', error: `Spotify Premium krävs. ${message}` });
+  });
+  player.addListener('playback_error', ({ message }) => {
+    reportError(spotifyError('playback_error', message), 'spotify.playback_error');
+    update({ error: message });
+  });
 
   const connected = await player.connect();
-  if (!connected) update({ status: 'error', error: 'Kunde inte ansluta till Spotify.' });
+  if (!connected) {
+    reportError(spotifyError('connect', 'Kunde inte ansluta till Spotify.'), 'spotify.connect');
+    update({ status: 'error', error: 'Kunde inte ansluta till Spotify.' });
+  }
 }
 
 /** Väntar tills SDK:n har gett ett device_id. */

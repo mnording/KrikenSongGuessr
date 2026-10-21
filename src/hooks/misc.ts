@@ -1,6 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ensureUser } from '../firebase';
+import { reportError } from '../sentry';
 import { heartbeat } from '../game/teamActions';
 import { HEARTBEAT_MS } from '../game/types';
 import { isLoggedIn, subscribeAuth } from '../spotify/auth';
@@ -12,7 +13,10 @@ export function useUser(): { user: User | null; error: string | null } {
   useEffect(() => {
     ensureUser()
       .then(setUser)
-      .catch((err) => setError(`Kunde inte logga in: ${String(err)}`));
+      .catch((err) => {
+        reportError(err, 'auth.signin');
+        setError(`Kunde inte logga in: ${String(err)}`);
+      });
   }, []);
   return { user, error };
 }
@@ -31,6 +35,7 @@ export function useNow(intervalMs = 5000): number {
 export function usePresence(code: string | undefined, uid: string | undefined, enabled: boolean) {
   useEffect(() => {
     if (!code || !uid || !enabled) return;
+    // Ett missat hjärtslag på dåligt nät är väntat: nästa kommer om tio sekunder. Rapporteras inte.
     const beat = (connected = true) => heartbeat(code, uid, connected).catch(() => {});
     beat();
     const id = setInterval(() => {

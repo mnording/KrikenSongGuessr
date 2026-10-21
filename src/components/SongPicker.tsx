@@ -4,6 +4,7 @@ import type { Song } from '../engine/game';
 import { decadesIn, hasEnoughSongs, SONG_TAGS, songsNeeded, toSongFilter, type SongFilter, type SongTag } from '../engine/library';
 import { setSongFilter } from '../game/hostActions';
 import type { GameDoc } from '../game/types';
+import { reportError } from '../sentry';
 import { errorMessage } from '../util';
 import { ErrorText } from './Common';
 
@@ -41,7 +42,10 @@ export function SongPicker({ code, game, songs, playable, teamCount, showTags = 
     const next = showTags ? choice : { ...choice, tags: [] };
     setFilter(next);
     setError(null);
-    setSongFilter(code, next).catch((err) => setError(`Kunde inte spara urvalet: ${errorMessage(err)}`));
+    setSongFilter(code, next).catch((err) => {
+      reportError(err, 'host.settings');
+      setError(`Kunde inte spara urvalet: ${errorMessage(err)}`);
+    });
   };
   const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 

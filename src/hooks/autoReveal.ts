@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { FAST_REVEAL_CAP_MS, FAST_UNDO_MS, isFast } from '../game/modes';
 import { moveRef } from '../game/refs';
 import type { GameDoc, MoveDoc, Team } from '../game/types';
+import { reportError, RETRIES_BEFORE_REPORT } from '../sentry';
 
 type Options = {
   code: string;
@@ -39,6 +40,7 @@ export function useAutoReveal({ code, game, move, team, busy, onReveal }: Option
     const delay = Math.max(0, Math.min(FAST_UNDO_MS + 800, firstSeen.current.at + FAST_REVEAL_CAP_MS - now));
 
     let timer: ReturnType<typeof setTimeout>;
+    let failures = 0;
     const attempt = () => {
       getDoc(moveRef(code, turn))
         .then((snap) => {
@@ -47,7 +49,9 @@ export function useAutoReveal({ code, game, move, team, busy, onReveal }: Option
           if (working) timer = setTimeout(attempt, 1000);
           else reveal(current, snap.data() as MoveDoc);
         })
-        .catch(() => {
+        .catch((err) => {
+          // Ett enstaka nätfel rättar sig vid nästa försök. Tre i rad betyder att turen står still: rapportera en gång.
+          if (++failures === RETRIES_BEFORE_REPORT) reportError(err, 'host.autoReveal');
           timer = setTimeout(attempt, 2000);
         });
     };

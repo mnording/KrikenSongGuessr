@@ -27,6 +27,7 @@ function readCache(key = CACHE_KEY): Record<string, string> {
   try {
     return JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, string>;
   } catch {
+    // En cache som inte går att läsa är bara tom: låtarna söks fram igen. Rapporteras inte.
     return {};
   }
 }
@@ -116,6 +117,7 @@ export async function albumArt(song: Song): Promise<string | null> {
     writeCache(song.id, image, IMAGE_CACHE_KEY);
     return image;
   } catch {
+    // Kortet visas utan bild. Ett riktigt Spotify-fel syns när låten spelas. Rapporteras inte.
     return null;
   }
 }
@@ -148,6 +150,7 @@ export async function spotifyYear(song: Song): Promise<number | null> {
     writeCache(song.id, year, YEAR_CACHE_KEY);
     return year ? Number(year) : null;
   } catch {
+    // Verktyget räknar låtar vars år inte gick att hämta och visar antalet. Rapporteras inte.
     return null;
   }
 }

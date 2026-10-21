@@ -30,3 +30,6 @@ dist-ssr
 # Impeccable working files
 .impeccable/review
 .impeccable/preview
+
+# Sentry Config File
+.env.sentry-build-plugin

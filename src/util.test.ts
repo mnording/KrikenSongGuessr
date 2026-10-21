@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MASCOTS } from './game/mascots';
-import { genitive, textOn } from './util';
+import { genitive, isDenied, textOn } from './util';
 
 describe('genitive', () => {
   it('lägger till s bara när namnet inte redan slutar på s, x eller z', () => {
@@ -31,5 +31,15 @@ describe('textOn', () => {
       expect(contrast(value, chosen), value).toBeGreaterThanOrEqual(contrast(value, other));
       expect(contrast(value, chosen), value).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+describe('isDenied', () => {
+  it('känner igen Firestores nekande och inget annat', () => {
+    expect(isDenied({ code: 'permission-denied' })).toBe(true);
+    expect(isDenied({ code: 'unavailable' })).toBe(false);
+    expect(isDenied(new Error('permission-denied'))).toBe(false);
+    expect(isDenied(null)).toBe(false);
+    expect(isDenied(undefined)).toBe(false);
   });
 });

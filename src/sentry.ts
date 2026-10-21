@@ -40,3 +40,24 @@ if (dsn) {
 }
 
 export const reactErrorHandler = Sentry.reactErrorHandler;
+
+/**
+ * Sentry ser bara fel som ingen fångar. Fel som appen själv fångar och visar, som Spotifys
+ * playback_error eller ett misslyckat play-anrop, måste skickas härifrån.
+ * area blir en tagg i Sentry, till exempel "spotify.playback", så att felen går att filtrera.
+ * Utan DSN tas anropet bort i bygget, precis som resten av Sentry.
+ */
+export function reportError(error: unknown, area: string) {
+  if (!dsn) return;
+  Sentry.captureException(error instanceof Error ? error : new Error(String(error)), { tags: { area } });
+}
+
+/** Loopar som försöker igen rapporterar först när så här många försök i rad har misslyckats, och bara en gång. */
+export const RETRIES_BEFORE_REPORT = 3;
+
+/** Ett felmeddelande från Spotifys SDK, som bara är en text, som ett fel med ett namn som går att gruppera på. */
+export function spotifyError(event: string, message: string): Error {
+  const error = new Error(message);
+  error.name = `Spotify ${event}`;
+  return error;
+}

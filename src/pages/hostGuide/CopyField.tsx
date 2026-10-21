@@ -22,6 +22,7 @@ export function CopyField({
         setStatus('copied');
         window.setTimeout(() => setStatus((s) => (s === 'copied' ? 'idle' : s)), 2500);
       })
+      // Webbläsaren kan neka urklipp (behörighet, osäker sida). Då visas texten att kopiera själv. Rapporteras inte.
       .catch(() => setStatus('failed'));
   };
 

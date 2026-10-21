@@ -39,6 +39,7 @@ import { posterUrl } from '../tmdb/match';
 const cardArt = (song: Song) => (song.poster ? Promise.resolve(posterUrl(song.poster)) : albumArt(song));
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
 import { errorMessage, genitive, textOn } from '../util';
+import { reportError } from '../sentry';
 
 export default function HostGame() {
   const { code = '' } = useParams();
@@ -113,14 +114,19 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
 
   const active = game.status !== 'finished';
   useEffect(() => {
-    if (active) void initPlayer().catch((err) => setError(errorMessage(err)));
+    if (active) {
+      void initPlayer().catch((err) => {
+        reportError(err, 'spotify.init');
+        setError(errorMessage(err));
+      });
+    }
     else disconnectPlayer();
   }, [active]);
 
   // Varje sidladdning ger ett nytt device_id. Spara det i private/state.
   useEffect(() => {
     if (player.deviceId && player.deviceId !== state?.spotifyDeviceId) {
-      void saveDeviceId(code, player.deviceId).catch(() => {});
+      void saveDeviceId(code, player.deviceId).catch((err) => reportError(err, 'host.device'));
     }
   }, [player.deviceId, state?.spotifyDeviceId, code]);
 
@@ -130,6 +136,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
       const uri = await resolveUri(card);
       await playTrack(uri);
     } catch (err) {
+      reportError(err, 'spotify.play');
       setError(`Musiken: ${errorMessage(err)}`);
     }
   }, []);
@@ -144,7 +151,10 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
     setBusy(true);
     setError(null);
     fn()
-      .catch((err) => setError(errorMessage(err)))
+      .catch((err) => {
+        reportError(err, 'host.action');
+        setError(errorMessage(err));
+      })
       .finally(() => {
         inFlight.current = false;
         setBusy(false);
@@ -323,7 +333,10 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
           value={gameMode(game)}
           onChange={(mode) => {
             setModeError(null);
-            setMode(code, mode, game.settings.songFilter).catch((err) => setModeError(`Kunde inte byta läge: ${errorMessage(err)}`));
+            setMode(code, mode, game.settings.songFilter).catch((err) => {
+              reportError(err, 'host.settings');
+              setModeError(`Kunde inte byta läge: ${errorMessage(err)}`);
+            });
           }}
         />
         <ErrorText error={modeError} />
@@ -351,7 +364,10 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
           aria-describedby="streak-help"
           onClick={() => {
             setStreakError(null);
-            setStreakMode(code, !isStreak(game)).catch((err) => setStreakError(`Kunde inte ändra: ${errorMessage(err)}`));
+            setStreakMode(code, !isStreak(game)).catch((err) => {
+              reportError(err, 'host.settings');
+              setStreakError(`Kunde inte ändra: ${errorMessage(err)}`);
+            });
           }}
         >
           {isStreak(game) ? 'Fortsätt eller lås: på' : 'Fortsätt eller lås: av'}
@@ -373,7 +389,10 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
           aria-describedby="fast-help"
           onClick={() => {
             setFastError(null);
-            setFastMode(code, !isFast(game)).catch((err) => setFastError(`Kunde inte ändra snabbläget: ${errorMessage(err)}`));
+            setFastMode(code, !isFast(game)).catch((err) => {
+              reportError(err, 'host.settings');
+              setFastError(`Kunde inte ändra snabbläget: ${errorMessage(err)}`);
+            });
           }}
         >
           {isFast(game) ? 'Snabbläge: på' : 'Snabbläge: av'}

@@ -2,12 +2,17 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorText } from '../../components/Common';
 import { login, parseClientId } from '../../spotify/auth';
+import { reportError } from '../../sentry';
 import { errorMessage } from '../../util';
 import { CopyField } from './CopyField';
 
 /** Sista steget: in på telefonen som ska spela, med QR-kod från datorn eller direkt här. */
 export function Handoff({ id, onEdit }: { id: string; onEdit: () => void }) {
   const [error, setError] = useState<string | null>(null);
+  const failed = (err: unknown) => {
+    reportError(err, 'spotify.login');
+    setError(errorMessage(err));
+  };
   const [touch] = useState(() => window.matchMedia('(pointer: coarse)').matches);
   const heading = useRef<HTMLHeadingElement>(null);
   const link = `${window.location.origin}/host/guide?app=${id}`;
@@ -19,7 +24,7 @@ export function Handoff({ id, onEdit }: { id: string; onEdit: () => void }) {
     <button
       type="button"
       className={touch ? 'primary big' : 'button'}
-      onClick={() => login('/host?klar', id).catch((err) => setError(errorMessage(err)))}
+      onClick={() => login('/host?klar', id).catch(failed)}
     >
       {touch ? 'Logga in med Spotify' : 'Logga in här i stället'}
     </button>
@@ -64,6 +69,10 @@ export function Handoff({ id, onEdit }: { id: string; onEdit: () => void }) {
 export function PhoneLogin({ id }: { id: string }) {
   const clientId = parseClientId(id);
   const [error, setError] = useState<string | null>(null);
+  const failed = (err: unknown) => {
+    reportError(err, 'spotify.login');
+    setError(errorMessage(err));
+  };
   if (!clientId) {
     return (
       <div className="card-box notice">
@@ -82,7 +91,7 @@ export function PhoneLogin({ id }: { id: string }) {
       <button
         type="button"
         className="primary big"
-        onClick={() => login('/host?klar', clientId).catch((err) => setError(errorMessage(err)))}
+        onClick={() => login('/host?klar', clientId).catch(failed)}
       >
         Logga in med Spotify
       </button>

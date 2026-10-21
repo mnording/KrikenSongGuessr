@@ -5,7 +5,8 @@ import { chooseStreak, undoStreak } from '../game/teamActions';
 import type { StreakAction, TeamDoc } from '../game/types';
 import { useNow } from '../hooks/misc';
 import { useT } from '../i18n/context';
-import { errorMessage } from '../util';
+import { reportError } from '../sentry';
+import { errorMessage, isDenied } from '../util';
 import { ErrorText } from './Common';
 
 type Props = {
@@ -57,6 +58,8 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
     try {
       await chooseStreak(code, uid, turnIndex, action, afterUndo);
     } catch (err) {
+      // Även nekat rapporteras: kan laget inte välja står spelet still, och det är ett fel i reglerna.
+      reportError(err, 'team.streak');
       setPressedAt(null);
       setError(t.streak.failed(errorMessage(err)));
     } finally {
@@ -71,8 +74,9 @@ export function StreakDock({ code, uid, turnIndex, risk, chosen, record }: Props
       await undoStreak(code, uid, turnIndex);
       setPressedAt(null);
     } catch (err) {
-      // Nekad betyder att fönstret har stängt. Annat är oftast nätet, och då går det att försöka igen.
-      setError((err as { code?: string }).code === 'permission-denied' ? t.streak.tooLate : t.streak.retry);
+      // Nekad betyder att fönstret har stängt, det är väntat. Annat är oftast nätet, och då går det att försöka igen.
+      if (!isDenied(err)) reportError(err, 'team.streak');
+      setError(isDenied(err) ? t.streak.tooLate : t.streak.retry);
     } finally {
       setBusy(false);
     }
