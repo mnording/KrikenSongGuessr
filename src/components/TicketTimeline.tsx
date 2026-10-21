@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { cardLines, type TimelineCard } from '../engine/game';
+import { useT } from '../i18n/context';
 import { slotLabel } from '../util';
 
 type Props = {
@@ -24,19 +25,20 @@ export function TicketTimeline({
   selectable = false,
   selectedSlot = null,
   onSelect,
-  pendingText = 'De funderar här…',
+  pendingText,
   highlightCardId,
   riskIds = [],
   stampedIds = [],
 }: Props) {
+  const { t } = useT();
   const slot = (index: number) => {
     const selected = selectedSlot === index;
-    const label = slotLabel(cards, index);
+    const label = slotLabel(cards, index, t.slots);
     if (selectable) {
       return selected ? (
         <button type="button" className="stub open" aria-pressed="true" aria-label={label} onClick={() => onSelect?.(index)}>
           <span className="stub-year">?</span>
-          <span className="stub-text">Här – {label.toLowerCase()}</span>
+          <span className="stub-text">{t.timeline.here(label)}</span>
         </button>
       ) : (
         <button type="button" className="perf perf-button" aria-pressed="false" aria-label={label} onClick={() => onSelect?.(index)}>
@@ -46,9 +48,9 @@ export function TicketTimeline({
     }
     if (selected) {
       return (
-        <div className="stub open theirs" aria-label={`Vald lucka: ${label}`}>
+        <div className="stub open theirs" aria-label={t.timeline.chosen(label)}>
           <span className="stub-year">?</span>
-          <span className="stub-text">{pendingText}</span>
+          <span className="stub-text">{pendingText ?? t.timeline.thinking}</span>
         </div>
       );
     }
@@ -57,7 +59,7 @@ export function TicketTimeline({
   };
 
   return (
-    <ol className="tickets" aria-label="Tidslinje">
+    <ol className="tickets" aria-label={t.timeline.label}>
       {cards.map((card, i) => (
         <Fragment key={card.cardId}>
           <li className="tickets-slot">{slot(i)}</li>
@@ -66,7 +68,7 @@ export function TicketTimeline({
             <span className="stub-text">
               <span className="stub-title">{cardLines(card).main}</span>
               <span className="stub-artist">{cardLines(card).sub}</span>
-              {riskIds.includes(card.cardId) && <span className="stub-risk">Ej inlåst</span>}
+              {riskIds.includes(card.cardId) && <span className="stub-risk">{t.timeline.notLockedIn}</span>}
             </span>
             {card.imageUrl && <img className={`stub-art${card.film ? ' poster' : ''}`} src={card.imageUrl} alt="" loading="lazy" />}
           </li>

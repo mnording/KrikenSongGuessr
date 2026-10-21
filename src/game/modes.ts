@@ -28,11 +28,16 @@ export function answersByChoice(game: GameDoc, team: TeamDoc): boolean {
   return mode === 'film' || (mode === 'family' && teamLevel(team) === 'easy');
 }
 
+export type ChoiceTexts = { ask: string; guess: string; past: string; pick: string; how: string; noun: string };
+
+export const SV_CHOICE_TEXTS: { film: ChoiceTexts; artist: ChoiceTexts } = {
+  film: { ask: 'Vilken film?', guess: 'Gissa med: vilken film?', past: 'Vilken film var det?', pick: 'Välj en film', how: 'tryck på filmen låten kommer från', noun: 'film' },
+  artist: { ask: 'Vem sjunger?', guess: 'Gissa med: vem sjunger?', past: 'Vem sjöng?', pick: 'Välj en artist', how: 'tryck på artisten som sjunger', noun: 'artist' },
+};
+
 /** Texterna kring alternativen: artister i Familj, filmer i Film. */
-export function choiceTexts(game: GameDoc) {
-  return gameMode(game) === 'film'
-    ? { ask: 'Vilken film?', guess: 'Gissa med: vilken film?', past: 'Vilken film var det?', pick: 'Välj en film', how: 'tryck på filmen låten kommer från', noun: 'film' }
-    : { ask: 'Vem sjunger?', guess: 'Gissa med: vem sjunger?', past: 'Vem sjöng?', pick: 'Välj en artist', how: 'tryck på artisten som sjunger', noun: 'artist' };
+export function choiceTexts(game: GameDoc, texts = SV_CHOICE_TEXTS): ChoiceTexts {
+  return gameMode(game) === 'film' ? texts.film : texts.artist;
 }
 
 /** Snabbläget: så länge laget kan ångra sitt drag. Samma gräns står i firestore.rules. */

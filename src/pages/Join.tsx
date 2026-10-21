@@ -9,11 +9,14 @@ import { gameRef, teamRef } from '../game/refs';
 import { joinGame } from '../game/teamActions';
 import type { MascotId } from '../game/mascots';
 import { gameMode, type GameDoc, type TeamLevel } from '../game/types';
+import { useT } from '../i18n/context';
+import { LangSwitch } from '../i18n/LangSwitch';
 import { errorMessage } from '../util';
 
 export default function Join() {
   const { code = '' } = useParams();
   const navigate = useNavigate();
+  const { t } = useT();
   const { user, error: authError } = useUser();
   const game = useDoc<GameDoc>(user ? gameRef(code) : null);
   const [alreadyMember, setAlreadyMember] = useState<boolean | null>(null);
@@ -29,31 +32,31 @@ export default function Join() {
   }, [user, code, game.data]);
 
   if (!/^\d{6}$/.test(code)) return <Navigate to="/" replace />;
-  if (authError) return <Screen title="Gå med"><ErrorText error={authError} /></Screen>;
+  if (authError) return <Screen title={t.join}><ErrorText error={authError} /></Screen>;
   if (!user || game.loading || (game.data && alreadyMember === null)) return <Loading />;
 
   if (!game.data) {
     return (
-      <Screen title="Hittade inget spel">
-        <p>Det finns inget spel med koden {code}. Kontrollera koden med spelledaren.</p>
-        <Link to="/" className="button">Tillbaka</Link>
+      <Screen title={t.joinPage.notFoundTitle}>
+        <p>{t.joinPage.notFound(code)}</p>
+        <Link to="/" className="button">{t.back}</Link>
       </Screen>
     );
   }
   if (alreadyMember) return <Navigate to={`/play/${code}`} replace />;
   if (game.data.hostUid === user.uid) {
     return (
-      <Screen title="Du är spelledare">
-        <p>Spelledaren kan inte vara med som lag, eftersom hen ser svaren.</p>
-        <Link to={`/host/${code}`} className="button">Till spelledarvyn</Link>
+      <Screen title={t.joinPage.hostTitle}>
+        <p>{t.joinPage.hostText}</p>
+        <Link to={`/host/${code}`} className="button">{t.joinPage.toHost}</Link>
       </Screen>
     );
   }
   if (game.data.status !== 'lobby') {
     return (
-      <Screen title="Spelet har startat">
-        <p>Det går inte att gå med efter att spelet startat. Vänta till nästa omgång.</p>
-        <Link to="/" className="button">Tillbaka</Link>
+      <Screen title={t.joinPage.startedTitle}>
+        <p>{t.joinPage.started}</p>
+        <Link to="/" className="button">{t.back}</Link>
       </Screen>
     );
   }
@@ -65,15 +68,16 @@ export default function Join() {
       await joinGame(code, user.uid, name, mascot, level);
       navigate(`/play/${code}`, { replace: true });
     } catch (err) {
-      setError(`Kunde inte gå med: ${errorMessage(err)}`);
+      setError(t.joinPage.failed(errorMessage(err)));
       setBusy(false);
     }
   };
 
   return (
-    <Screen title={`Gå med i spel ${code}`}>
-      <ProfileForm submitLabel="Gå med" chooseLevel={gameMode(game.data) === 'family'} busy={busy} onSubmit={submit} />
+    <Screen title={t.joinPage.title(code)}>
+      <ProfileForm submitLabel={t.join} chooseLevel={gameMode(game.data) === 'family'} busy={busy} onSubmit={submit} />
       <ErrorText error={error} />
+      <LangSwitch />
     </Screen>
   );
 }

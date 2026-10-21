@@ -16,6 +16,8 @@ npm run deploy       # bygger och deployar hosting och regler
 
 `.env.local` behöver `VITE_SPOTIFY_CLIENT_ID`. För filmlistans premiärår och affischer behövs också `VITE_TMDB_API_KEY` (gratis på themoviedb.org, under Inställningar → API). Den används bara i `npm run dev` och följer aldrig med i bygget.
 
+Felrapporter går till Sentry när `VITE_SENTRY_DSN` finns i bygget (sätt den i `.env.production.local` eller i miljön före `npm run deploy`). Utan den följer Sentry inte med alls. Bara fel skickas: ingen prestandamätning, inga användaruppgifter, cookies, headers eller query, och adresser skickas utan `?` och `#` så att Spotifys inloggningskod aldrig följer med (`src/sentry.ts`). För läsbara stackspår laddas källkartorna upp när `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` och `SENTRY_PROJECT` finns i miljön vid bygget. De raderas sedan ur `dist`, så de publiceras aldrig.
+
 Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 
 - `https://krikensongguessr.web.app/callback`

@@ -16,35 +16,43 @@ import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
 import { leaveGame, lockChoice, lockMove, selectSlot, setLevel, updateProfile } from '../game/teamActions';
 import { getMascot, MASCOTS, type MascotMood } from '../game/mascots';
-import { answersByChoice, choiceTexts, isFast, isStreak, LEVELS, showsChoices, streakChoiceFor } from '../game/modes';
+import { answersByChoice, choiceTexts, isFast, isStreak, showsChoices, streakChoiceFor } from '../game/modes';
 import { resultBand } from '../game/resultBand';
 import { atRisk, canContinue, splitScore, type Streak } from '../engine/streak';
 import { gameMode, isOnline, teamLevel, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
-import { errorMessage, genitive, textOn } from '../util';
+import { useT } from '../i18n/context';
+import { LangSwitch } from '../i18n/LangSwitch';
+import { Rich } from '../i18n/Rich';
+import type { Messages } from '../i18n/sv';
+import { errorMessage, textOn } from '../util';
+
+/** Fasta armbandstexter som blir för långa på något språk får den mindre storleken, precis som en fråga. */
+const LONG_BAND = 10;
 
 export default function Play() {
   const { code = '' } = useParams();
+  const { t } = useT();
   const { user, error: authError } = useUser();
   const game = useDoc<GameDoc>(user ? gameRef(code) : null);
   const teams = useCollection<TeamDoc>(user && game.data ? teamsRef(code) : null);
-  const me = teams.data.find((t) => t.uid === user?.uid);
+  const me = teams.data.find((team) => team.uid === user?.uid);
   usePresence(code, user?.uid, Boolean(me));
 
   if (authError) return <Screen><ErrorText error={authError} /></Screen>;
   if (!user || game.loading || (game.data && teams.loading)) return <Loading />;
   if (!game.data) {
     return (
-      <Screen title="Spelet finns inte längre">
-        <Link to="/" className="button">Till startsidan</Link>
+      <Screen title={t.play.gameGoneTitle}>
+        <Link to="/" className="button">{t.play.toStart}</Link>
       </Screen>
     );
   }
   if (teams.error || !me) {
     // Inte med (längre). Antingen borttagen av spelledaren eller aldrig anslutit.
     return game.data.status === 'lobby' ? (
-      <Screen title="Du är inte med i spelet">
-        <p>Spelledaren kan ha tagit bort ditt lag. Du kan gå med igen.</p>
-        <Link to={`/join/${code}`} className="button primary">Gå med</Link>
+      <Screen title={t.play.notInGameTitle}>
+        <p>{t.play.notInGame}</p>
+        <Link to={`/join/${code}`} className="button primary">{t.join}</Link>
       </Screen>
     ) : (
       <Navigate to={`/join/${code}`} replace />
@@ -55,9 +63,10 @@ export default function Play() {
 
   if (game.data.status === 'lobby') return <Lobby code={code} game={game.data} me={me} teams={sortedTeams} />;
   if (game.data.status === 'finished') {
-    const winners = sortedTeams.filter((t) => game.data!.winnerUids.includes(t.uid));
-    const bandTeam = winners.find((t) => t.uid === me.uid) ?? winners[0];
+    const winners = sortedTeams.filter((team) => game.data!.winnerUids.includes(team.uid));
+    const bandTeam = winners.find((team) => team.uid === me.uid) ?? winners[0];
     const byScore = [...sortedTeams].sort((a, b) => (b.timeline?.length ?? 0) - (a.timeline?.length ?? 0));
+    const title = winnerTitle(game.data, teams.data, me.uid, t);
     return (
       <FestPage>
         <Wristband
@@ -65,12 +74,13 @@ export default function Play() {
           mascot={bandTeam?.mascot}
           mood="happy"
           mine={bandTeam?.uid === me.uid}
-          big={winnerTitle(game.data, teams.data, me.uid)}
-          sub="Spelet är slut"
+          big={title}
+          sub={t.play.gameOver}
+          long={title.length > LONG_BAND}
         />
         <Bands teams={byScore} winnerUids={game.data.winnerUids} />
-        <p className="hint">Spelledaren kan starta en ny omgång.</p>
-        <h2>Er tidslinje</h2>
+        <p className="hint">{t.play.newRound}</p>
+        <h2>{t.play.myTimeline}</h2>
         <TicketTimeline cards={me.timeline ?? []} />
       </FestPage>
     );
@@ -90,7 +100,10 @@ function FestPage({ children }: { children: ReactNode }) {
   }, []);
   return (
     <div className="fest">
-      <main className="screen">{children}</main>
+      <main className="screen">
+        {children}
+        <LangSwitch />
+      </main>
     </div>
   );
 }
@@ -128,31 +141,32 @@ type BandsProps = {
 
 /** Alla lag som armband i ett rutnät, så att ingen behöver skrolla i sidled. */
 function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = [], streak }: BandsProps) {
+  const { t } = useT();
   return (
-    <ul className={`bands${teams.length <= 8 ? ' few' : ''}`} aria-label={onShow ? 'Visa lagets tidslinje' : 'Lag'}>
-      {teams.map((t) => {
-        const offline = now !== undefined && !isOnline(t, now);
-        const className = `band${t.uid === shownUid ? ' shown' : ''}${offline ? ' offline' : ''}${winnerUids.includes(t.uid) ? ' winner' : ''}`;
-        const style = { backgroundColor: t.color, color: textOn(t.color) };
+    <ul className={`bands${teams.length <= 8 ? ' few' : ''}`} aria-label={onShow ? t.play.showTeam : t.play.teamsLabel}>
+      {teams.map((team) => {
+        const offline = now !== undefined && !isOnline(team, now);
+        const className = `band${team.uid === shownUid ? ' shown' : ''}${offline ? ' offline' : ''}${winnerUids.includes(team.uid) ? ' winner' : ''}`;
+        const style = { backgroundColor: team.color, color: textOn(team.color) };
         const content = (
           <>
             {/* Under spelet behöver namnet och räknaren hela bredden. */}
-            {!showCount && <MascotPin mascot={t.mascot} />}
+            {!showCount && <MascotPin mascot={team.mascot} />}
             <span className="band-name">
-              {t.name}
-              {offline && <span className="band-off">offline</span>}
+              {team.name}
+              {offline && <span className="band-off">{t.play.offline}</span>}
             </span>
-            {showCount && <BandCount team={t} streak={streak} />}
+            {showCount && <BandCount team={team} streak={streak} />}
           </>
         );
         return (
-          <li key={t.uid}>
+          <li key={team.uid}>
             {onShow ? (
-              <button type="button" className={className} style={style} aria-pressed={t.uid === shownUid} onClick={() => onShow(t.uid)}>
+              <button type="button" className={className} style={style} aria-pressed={team.uid === shownUid} onClick={() => onShow(team.uid)}>
                 {content}
               </button>
             ) : (
-              <div className={className} style={style} title={offline ? 'offline' : undefined}>
+              <div className={className} style={style} title={offline ? t.play.offline : undefined}>
                 {content}
               </div>
             )}
@@ -164,33 +178,35 @@ function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = []
 }
 
 function BandCount({ team, streak }: { team: Team; streak?: Streak | null }) {
+  const { t } = useT();
   const { banked, risk } = splitScore(team.timeline ?? [], streak, team.uid);
   return (
     <span className="band-count">
       {banked}
-      <span className="visually-hidden"> kort</span>
+      <span className="visually-hidden"> {t.play.cards}</span>
       {risk > 0 && (
         <span className="band-risk">
           +{risk}
-          <span className="visually-hidden"> ej inlåsta</span>
+          <span className="visually-hidden"> {t.play.notLockedIn}</span>
         </span>
       )}
     </span>
   );
 }
 
-function winnerTitle(game: GameDoc, teams: Team[], myUid: string): string {
-  if (game.winnerUids.includes(myUid)) return game.winnerUids.length > 1 ? 'Delad seger!' : 'Ni vann! 🎉';
-  const names = teams.filter((t) => game.winnerUids.includes(t.uid)).map((t) => t.name);
-  return names.length ? `${names.join(' och ')} vann` : 'Spelet är slut';
+function winnerTitle(game: GameDoc, teams: Team[], myUid: string, t: Messages): string {
+  if (game.winnerUids.includes(myUid)) return game.winnerUids.length > 1 ? t.play.sharedWin : t.play.youWon;
+  const names = teams.filter((team) => game.winnerUids.includes(team.uid)).map((team) => team.name);
+  return names.length ? t.play.won(names) : t.play.gameOver;
 }
 
 function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Team; teams: Team[] }) {
+  const { t } = useT();
   const family = gameMode(game) === 'family';
   const now = useNow();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const position = teams.findIndex((t) => t.uid === me.uid);
+  const position = teams.findIndex((team) => team.uid === me.uid);
   const full = position >= MAX_TEAMS;
 
   // Max 10 lag. Den som kom för sent lämnar själv lobbyn.
@@ -200,9 +216,9 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
 
   if (full) {
     return (
-      <Screen title="Spelet är fullt">
-        <p>Högst {MAX_TEAMS} lag får vara med.</p>
-        <Link to="/" className="button">Tillbaka</Link>
+      <Screen title={t.play.fullTitle}>
+        <p>{t.play.full(MAX_TEAMS)}</p>
+        <Link to="/" className="button">{t.back}</Link>
       </Screen>
     );
   }
@@ -214,12 +230,13 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
         mascot={me.mascot}
         mood="happy"
         mine
-        big="Ni är med!"
+        big={t.play.joined}
+        long={t.play.joined.length > LONG_BAND}
         sub={
           <>
             {me.name}
             <button type="button" className="link" onClick={() => setEditing((v) => !v)}>
-              {editing ? 'Stäng' : 'Ändra'}
+              {editing ? t.close : t.play.edit}
             </button>
           </>
         }
@@ -229,8 +246,8 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
           initialName={me.name}
           // Ett lag från före maskotarna får maskoten med samma färg, så att det ser ut som förut.
           initialMascot={getMascot(me.mascot)?.id ?? MASCOTS.find((m) => m.color === me.color)?.id}
-          takenMascots={teams.filter((t) => t.uid !== me.uid).flatMap((t) => (t.mascot ? [t.mascot] : []))}
-          submitLabel="Spara"
+          takenMascots={teams.filter((team) => team.uid !== me.uid).flatMap((team) => (team.mascot ? [team.mascot] : []))}
+          submitLabel={t.profile.save}
           onSubmit={(name, mascot) => {
             updateProfile(code, me.uid, name, mascot)
               .then(() => setEditing(false))
@@ -243,9 +260,9 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
       {family && (
         <div className="card-box">
           <ChoiceCards
-            legend="Familj-läget: välj nivå"
+            legend={t.play.familyLevel}
             name="level"
-            options={LEVELS}
+            options={t.levels}
             value={teamLevel(me)}
             onChange={(level) => void setLevel(code, me.uid, level).catch((err) => setError(errorMessage(err)))}
           />
@@ -253,17 +270,18 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
       )}
       {gameMode(game) === 'film' && (
         <p className="hint">
-          I Film-läget <strong>gissar ni vilken film låten kommer från</strong>. Det finns fyra att välja bland.
+          <Rich text={t.play.filmHint} />
         </p>
       )}
-      <p className="hint">Väntar på att spelledaren startar spelet…</p>
-      <h2>Lag ({teams.length})</h2>
+      <p className="hint">{t.play.waitingStart}</p>
+      <h2>{t.play.teams(teams.length)}</h2>
       <Bands teams={teams} now={now} showCount={false} shownUid={me.uid} />
     </FestPage>
   );
 }
 
 function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Team; teams: Team[] }) {
+  const { t } = useT();
   const now = useNow();
   const move = useDoc<MoveDoc>(moveRef(code, game.turnIndex));
   const [slot, setSlot] = useState<number | null>(null);
@@ -287,17 +305,17 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
     setViewUid(null);
   }
 
-  const current = teams.find((t) => t.uid === game.currentTeamUid);
+  const current = teams.find((team) => team.uid === game.currentTeamUid);
   const myTurn = game.currentTeamUid === me.uid;
   const locked = Boolean(move.data);
   // Familj: ett lätt lag väljer artist i stället för lucka, och alla andra får gissa med.
   const byArtist = myTurn && answersByChoice(game, me);
-  const texts = choiceTexts(game);
+  const texts = choiceTexts(game, t.choices);
   const canPlace = myTurn && !byArtist && game.phase === 'placing' && !locked && !move.loading;
   const canPick = byArtist && game.phase === 'placing' && !locked && !move.loading;
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const shownUid = viewUid ?? (myTurn ? me.uid : game.currentTeamUid ?? me.uid);
-  const shown = teams.find((t) => t.uid === shownUid) ?? me;
+  const shown = teams.find((team) => team.uid === shownUid) ?? me;
 
   const choose = (index: number) => {
     setSlot(index);
@@ -314,7 +332,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       if (byArtist) await lockChoice(code, me.uid, game.turnIndex, pick!);
       else await lockMove(code, me.uid, game.turnIndex, slot!);
     } catch (err) {
-      setError(`Kunde inte låsa: ${errorMessage(err)}`);
+      setError(t.play.lockFailed(errorMessage(err)));
     } finally {
       setBusy(false);
     }
@@ -328,9 +346,8 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         ? (move.data?.slotIndex ?? shown.pendingSlot ?? null)
         : null;
 
-  const resultTeam = result ? teams.find((t) => t.uid === result.teamUid) : undefined;
+  const resultTeam = result ? teams.find((team) => team.uid === result.teamUid) : undefined;
   const resultMine = result?.teamUid === me.uid;
-  const lockedText = 'Låst här';
   const showChoices = showsChoices(game, myTurn, byArtist);
 
   // Fortsätt eller lås: efter ett rätt svar väljer laget i tur, och de andra ser att det funderar.
@@ -342,16 +359,19 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   // Inlåst syns direkt under ångerfönstret: korten blir stämplade biljetter.
   const stamping = choice === 'lock' && resultTeam?.uid === shown.uid;
   const band = result
-    ? resultBand({
-        correct: result.correct,
-        choosing,
-        choice,
-        mine: resultMine,
-        teamName: resultTeam?.name ?? 'Laget',
-        risk,
-        total: resultTeam?.timeline?.length ?? 0,
-        lost: lost.length,
-      })
+    ? resultBand(
+        {
+          correct: result.correct,
+          choosing,
+          choice,
+          mine: resultMine,
+          teamName: resultTeam?.name ?? t.play.theTeam,
+          risk,
+          total: resultTeam?.timeline?.length ?? 0,
+          lost: lost.length,
+        },
+        t.band,
+      )
     : null;
 
   return (
@@ -368,9 +388,9 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
           long={band.long}
         />
       ) : myTurn ? (
-        <Wristband color={me.color} mascot={me.mascot} mine big="Er tur!" sub={me.name} />
+        <Wristband color={me.color} mascot={me.mascot} mine big={t.play.yourTurn} sub={me.name} long={t.play.yourTurn.length > LONG_BAND} />
       ) : (
-        <Wristband color={current?.color} mascot={current?.mascot} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
+        <Wristband color={current?.color} mascot={current?.mascot} big={current ? t.play.theirTurn(current.name) : t.play.waiting} />
       )}
 
       <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} streak={game.streak} />
@@ -387,7 +407,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
           </div>
           {/* Fortsätt eller lås: korten som revs bort med felet, kvar som spöken tills nästa tur. */}
           {lost.length > 0 && (
-            <ol className="ghosts" aria-label={`${lost.length} tappade kort`}>
+            <ol className="ghosts" aria-label={t.play.lostCards(lost.length)}>
               {lost.map((card) => (
                 <li key={card.cardId} className="stub ghost">
                   <span className="stub-year">{card.year}</span>
@@ -402,34 +422,27 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         </div>
       )}
 
-      {result?.reachedTarget && <p className="verdict">Det är klart – {game.settings.targetLength} kort!</p>}
+      {result?.reachedTarget && <p className="verdict">{t.play.reachedTarget(game.settings.targetLength)}</p>}
 
       <p className="hint">
         {deciding ? (
           choice ? null : (
-            <>
-              <strong>Lås in</strong> så blir {risk === 1 ? 'kortet ert' : 'korten era'} och turen går vidare.{' '}
-              <strong>Fortsätt</strong> så kommer en låt till.
-            </>
+            <Rich text={t.play.decideHint(risk)} />
           )
         ) : choosing ? (
-          choice ? null : 'Hetsa dem åt något håll!'
+          choice ? null : t.play.eggHint
         ) : result ? (
-          'Väntar på nästa tur…'
+          t.play.waitingNext
         ) : myTurn && game.phase === 'placing' ? (
           locked ? (
-            isFast(game) ? 'Låst! Svaret visas om några sekunder.' : 'Låst! Väntar på att spelledaren avslöjar.'
+            isFast(game) ? t.play.lockedFast : t.play.lockedHost
           ) : byArtist ? (
-            <>
-              Lyssna och {texts.how}. <strong>Tryck sedan Lås.</strong>
-            </>
+            <Rich text={t.play.chooseHint(texts.how)} />
           ) : (
-            <>
-              Lyssna och tryck på luckan där låten passar. <strong>Tryck sedan Lås.</strong>
-            </>
+            <Rich text={t.play.slotHint} />
           )
         ) : game.phase === 'placing' ? (
-          locked ? `${current?.name ?? 'Laget'} har låst. Väntar på avslöjandet.` : 'Lyssna och gissa med!'
+          locked ? t.play.otherLocked(current?.name ?? t.play.theTeam) : t.play.guessAlong
         ) : null}
       </p>
 
@@ -445,7 +458,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
 
       {/* Med alternativen ovanför behöver tidslinjen alltid en rubrik, annars ser första kortet ut som ett alternativ. */}
       {(showChoices || (shown.uid !== me.uid && shown.uid !== game.currentTeamUid)) && (
-        <h2>{shown.uid === me.uid ? 'Er tidslinje' : `${genitive(shown.name)} tidslinje`}</h2>
+        <h2>{shown.uid === me.uid ? t.play.myTimeline : t.play.theirTimeline(shown.name)}</h2>
       )}
 
       <TicketTimeline
@@ -453,7 +466,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         selectable={canPlace && shown.uid === me.uid}
         selectedSlot={shownSlot}
         onSelect={choose}
-        pendingText={locked ? lockedText : 'De funderar här…'}
+        pendingText={locked ? t.play.lockedHere : t.timeline.thinking}
         highlightCardId={result?.correct && result.teamUid === shown.uid ? result.card.cardId : null}
         riskIds={stamping ? [] : atRisk(game.streak, shown.uid)}
         stampedIds={stamping ? atRisk(game.streak, shown.uid) : []}
@@ -481,7 +494,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       {canPick && (
         <div className="sticky-actions">
           <button type="button" className="lock" disabled={pick === null || busy} onClick={(e) => void lock(e.timeStamp)}>
-            {pick === null ? texts.pick : busy ? 'Låser…' : 'Lås'}
+            {pick === null ? texts.pick : busy ? t.play.locking : t.play.lock}
           </button>
         </div>
       )}
@@ -489,11 +502,11 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         <div className="sticky-actions">
           {shown.uid !== me.uid ? (
             <button type="button" className="lock" onClick={() => setViewUid(me.uid)}>
-              Visa vår tidslinje
+              {t.play.showOurs}
             </button>
           ) : (
             <button type="button" className="lock" disabled={slot === null || busy} onClick={(e) => void lock(e.timeStamp)}>
-              {slot === null ? 'Välj en lucka' : busy ? 'Låser…' : 'Lås'}
+              {slot === null ? t.play.pickSlot : busy ? t.play.locking : t.play.lock}
             </button>
           )}
         </div>
@@ -503,13 +516,10 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
           <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">
             <img src="/tmdb-logo.svg" alt="TMDB" />
           </a>
-          Filmaffischer från TMDB. Appen använder
-          TMDB:s API men är inte godkänd eller certifierad av TMDB.
+          {t.play.tmdb}
         </p>
       )}
-      <p className="fest-foot">
-        Först till {game.settings.targetLength} kort vinner · {game.cardsLeft} kort kvar i leken
-      </p>
+      <p className="fest-foot">{t.play.foot(game.settings.targetLength, game.cardsLeft)}</p>
     </FestPage>
   );
 }

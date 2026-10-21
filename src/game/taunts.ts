@@ -1,6 +1,6 @@
 // Pikar och reaktioner: färdiga och vänliga, så att inget behöver modereras.
 // Pikar skickas medan ett lag gissar, reaktioner efter avslöjandet. Båda delar samma spärr.
-import { getMascot, type MascotMood } from './mascots';
+import { getMascot, MASCOTS, type MascotId, type MascotMood } from './mascots';
 import type { TeamDoc } from './types';
 
 /** Så länge ett lag måste vänta mellan två pikar eller reaktioner. Samma gräns står i firestore.rules. */
@@ -32,7 +32,7 @@ export const TAUNT_IDS = [...TAUNTS.map((t) => t.id), SIGNATURE];
  */
 export type ReactionKind = 'cheer' | 'tease' | 'thanks' | 'comeback';
 
-export const REACTIONS: { id: string; text: string; kind: ReactionKind }[] = [
+export const REACTIONS = [
   { id: 'grattis', text: 'Grattis! 🎉', kind: 'cheer' },
   { id: 'proffs', text: 'Proffs! 🏆', kind: 'cheer' },
   { id: 'starkt', text: 'Starkt jobbat! 👏', kind: 'cheer' },
@@ -43,9 +43,9 @@ export const REACTIONS: { id: string; text: string; kind: ReactionKind }[] = [
   { id: 'latt', text: 'Lätt som en plätt 😎', kind: 'thanks' },
   { id: 'vanta', text: 'Vänta bara! 😤', kind: 'comeback' },
   { id: 'nastavar', text: 'Nästa är vår! 🔥', kind: 'comeback' },
-];
+] as const satisfies readonly { id: string; text: string; kind: ReactionKind }[];
 
-export const REACTION_IDS = REACTIONS.map((r) => r.id);
+export const REACTION_IDS: string[] = REACTIONS.map((r) => r.id);
 
 /** Fortsätt eller lås: de andra lagen hetsar laget som väljer, åt båda hållen. */
 export const DECISION_TAUNTS = [
@@ -71,13 +71,26 @@ export function tauntMood(id: string): MascotMood {
 
 export const isReaction = (id: string) => REACTION_IDS.includes(id);
 
+/** Alla färdiga texter. Varje språk måste ha en översättning för varje id. */
+const TEXTS = [...TAUNTS, ...REACTIONS, ...DECISION_TAUNTS];
+
+export type TextId = (typeof TEXTS)[number]['id'];
+
+/** Pikarna och maskotreplikerna på ett språk. Bara id:t sparas, så att varje telefon visar sitt eget språk. */
+export type TauntTexts = { taunts: Record<TextId, string>; signatures: Record<MascotId, string> };
+
+export const SV_TAUNT_TEXTS: TauntTexts = {
+  taunts: Object.fromEntries(TEXTS.map((t) => [t.id, t.text])) as Record<TextId, string>,
+  signatures: Object.fromEntries(MASCOTS.map((m) => [m.id, m.signature])) as Record<MascotId, string>,
+};
+
+const isTextId = (id: string): id is TextId => TEXTS.some((t) => t.id === id);
+
 /** Texten för en pik eller reaktion från ett visst lag, eller null om den inte finns. */
-export function tauntText(id: string, team: Pick<TeamDoc, 'mascot'>): string | null {
-  if (id === SIGNATURE) return getMascot(team.mascot)?.signature ?? null;
-  return (
-    TAUNTS.find((t) => t.id === id)?.text ??
-    REACTIONS.find((r) => r.id === id)?.text ??
-    DECISION_TAUNTS.find((t) => t.id === id)?.text ??
-    null
-  );
+export function tauntText(id: string, team: Pick<TeamDoc, 'mascot'>, texts: TauntTexts = SV_TAUNT_TEXTS): string | null {
+  if (id === SIGNATURE) {
+    const mascot = getMascot(team.mascot);
+    return mascot ? texts.signatures[mascot.id] : null;
+  }
+  return isTextId(id) ? texts.taunts[id] : null;
 }
