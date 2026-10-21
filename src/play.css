@@ -637,3 +637,68 @@
 .fest .level-option span {
   color: var(--fest-muted);
 }
+
+/* ── Pikarna: knappen längst ner för lagen som väntar ── */
+
+.taunt-dock {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taunt-open {
+  min-height: 56px;
+  border: 2px solid var(--act);
+  border-radius: 10px;
+  background: var(--night-2);
+  color: var(--fest-text);
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Spärren: fortfarande läsbar, men utan den tryckbara limekanten. */
+.taunt-open:disabled {
+  opacity: 1;
+  border: 2px dashed var(--perf);
+  color: var(--fest-muted);
+}
+
+/* Listan ligger på en egen yta, så att tidslinjen bakom inte syns igenom. */
+.taunt-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--night-2);
+  list-style: none;
+}
+
+.taunt-options button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* Maskotens egen replik är längst och får hela bredden. */
+.taunt-options .taunt-signature {
+  grid-column: 1 / -1;
+}
+
+.taunt-options .mascot-pin {
+  width: 36px;
+}

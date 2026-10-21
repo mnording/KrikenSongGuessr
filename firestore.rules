@@ -53,12 +53,14 @@ service cloud.firestore {
           || (signedIn()
             && uid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['name', 'color', 'mascot', 'level', 'connected', 'lastSeen', 'pendingSlot', 'guess'])
+                 .hasOnly(['name', 'color', 'mascot', 'level', 'connected', 'lastSeen', 'pendingSlot', 'guess', 'taunt'])
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['level'])
               || game(code).status == 'lobby')
             // Gissningen ger inga kort, men ska inte gå att ändra efter att svaret visats.
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['guess'])
               || game(code).phase == 'placing')
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['taunt'])
+              || validTaunt(code, uid, request.resource.data.taunt, resource.data))
             && validProfile(request.resource.data));
 
         // Spelledaren tar bort lag, och ett lag får lämna i lobbyn.
@@ -119,6 +121,22 @@ service cloud.firestore {
         || ('choice' in data
           && !('slotIndex' in data)
           && validChoice(data.choice));
+    }
+
+    // En pik: en av de färdiga, bara medan ett annat lag gissar, och högst en var åttonde sekund.
+    // Tiden kommer från servern, så spärren går inte att fuska förbi.
+    function validTaunt(code, uid, taunt, before) {
+      return taunt.keys().hasOnly(['id', 'at', 'turnIndex'])
+        && taunt.keys().hasAll(['id', 'at', 'turnIndex'])
+        && taunt.id in ['sakert', 'alla', 'ojoj', 'tick', 'tittar', 'snyggt', 'signatur']
+        && taunt.at == request.time
+        && game(code).status == 'playing'
+        && game(code).phase == 'placing'
+        && game(code).currentTeamUid != uid
+        && taunt.turnIndex == game(code).turnIndex
+        && (!('taunt' in before)
+          || before.taunt == null
+          || request.time > before.taunt.at + duration.value(8, 's'));
     }
 
     function validChoice(choice) {

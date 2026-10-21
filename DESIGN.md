@@ -326,6 +326,12 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 - **Open (ours):** choosing a slot tears the strip open into an unnotched stub with a 3px dashed lime edge, lime wash, a lime "?" and "Här – mellan X och Y"; it grows in (0.35s scale and fade).
 - **Open (theirs):** the same stub, transparent with a Theirs Outline dashed edge and muted text, reading "De funderar här…" or "Låst här".
 
+### Taunts
+Teams waiting for their turn tease the team that is placing, in `src/components/Taunts.tsx`.
+- **Dock:** waiting teams get a docked button "😏 Skicka en pik": Night Raised fill, 2px Acid Lime edge, display face at 1.4rem. It opens a Night Raised panel above it: the team's own mascot line across the full width (with its pin), then the six shared lines in two columns, each a left-aligned Ticket Paper slab of 48px, so the panel covers about half the screen. The panel closes when a taunt is sent or the turn changes. After sending, the button turns dashed and muted with a countdown ("Pika igen om 7 s"), counted from the team's stored taunt so it survives a reload.
+- **Toast:** every phone in the game, the host's included, shows the taunt as a small wristband in the sender's team colour (22px pill, contrast-chosen text) with the sender's mascot in its cheeky mood. On team phones it slides in at the top over the wristband; on the host it sits in the flow under the turn banner so the banner always shows whose turn it is. It stays 3 s plus 60 ms per character (at most 7 s), at most two stack, and it is not pressable.
+- **Copy:** only fixed, friendly lines, so nothing needs moderating.
+
 ### Artist Choices (Familj)
 Four artists for the turn, in `src/components/ArtistChoices.tsx`.
 - **Style:** full-width Ticket Paper slabs, 56px minimum, 6px rounding, no notches. A letter A–D in the display face sits left of a dashed tear line, so kids can shout "B!"; the artist name is Body Strong.

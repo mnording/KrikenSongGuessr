@@ -801,3 +801,47 @@ label {
   width: 48px;
   padding: 0;
 }
+
+/* Pikarna: små armband i lagets färg som glider in överst, i båda världarna. Går inte att trycka på. */
+.taunts {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: 16px;
+  right: 16px;
+  z-index: 20;
+  display: grid;
+  gap: 6px;
+  max-width: 528px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+/* Spelledaren: i flödet under turbanderollen, i stället för över den. */
+.taunts.inline {
+  position: static;
+  max-width: none;
+  margin: 8px 0 0;
+}
+
+.taunt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 14px 6px 6px;
+  border-radius: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  animation: taunt-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.taunt .mascot-pin {
+  width: 40px;
+}
+
+@keyframes taunt-in {
+  from {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
+}

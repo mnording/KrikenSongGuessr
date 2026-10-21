@@ -67,3 +67,8 @@ export async function lockChoice(code: string, uid: string, turnIndex: number, c
 export async function guessArtist(code: string, uid: string, turnIndex: number, choice: number) {
   await updateDoc(teamRef(code, uid), { guess: { turnIndex, choice } });
 }
+
+/** En färdig pik till laget som gissar. Reglerna stoppar den om laget pikat de senaste åtta sekunderna. */
+export async function sendTaunt(code: string, uid: string, turnIndex: number, id: string) {
+  await updateDoc(teamRef(code, uid), { taunt: { id, at: serverTimestamp(), turnIndex } });
+}
