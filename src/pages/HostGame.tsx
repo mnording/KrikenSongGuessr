@@ -39,6 +39,7 @@ import { posterUrl } from '../tmdb/match';
 const cardArt = (song: Song) => (song.poster ? Promise.resolve(posterUrl(song.poster)) : albumArt(song));
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
 import { errorMessage, genitive, textOn } from '../util';
+import { reportError } from '../sentry';
 
 export default function HostGame() {
   const { code = '' } = useParams();
@@ -113,7 +114,12 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
 
   const active = game.status !== 'finished';
   useEffect(() => {
-    if (active) void initPlayer().catch((err) => setError(errorMessage(err)));
+    if (active) {
+      void initPlayer().catch((err) => {
+        reportError(err, 'spotify.init');
+        setError(errorMessage(err));
+      });
+    }
     else disconnectPlayer();
   }, [active]);
 
@@ -130,6 +136,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
       const uri = await resolveUri(card);
       await playTrack(uri);
     } catch (err) {
+      reportError(err, 'spotify.play');
       setError(`Musiken: ${errorMessage(err)}`);
     }
   }, []);
@@ -144,7 +151,10 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
     setBusy(true);
     setError(null);
     fn()
-      .catch((err) => setError(errorMessage(err)))
+      .catch((err) => {
+        reportError(err, 'host.action');
+        setError(errorMessage(err));
+      })
       .finally(() => {
         inFlight.current = false;
         setBusy(false);
