@@ -54,6 +54,10 @@ Spelledaren väljer läge i lobbyn (`settings.mode` på spelet, saknas det gäll
 - **Tidslinje:** som från början.
 - **Familj:** varje lag väljer nivå när det går med (`level` på laget, går bara att byta i lobbyn). Ett lätt lag väljer artist bland fyra (`choices` på spelet, `choice` i draget) och får kortet i årsordning om det är rätt. Ett svårt lag lägger i tidslinjen. Övriga lag gissar med (`guess` på laget, bara medan turen pågår), vilket inte ger några kort. Nivån sparas även i tidslinjeläget men används inte där, så att spelledaren kan byta läge i lobbyn utan att lagen behöver gå med igen. Lag som gick med före bytet är svåra tills de väljer nivå i lobbyn. Alternativen väljs i `src/engine/artist.ts`.
 
+## Pikar
+
+Medan ett lag placerar kan de andra lagen skicka en färdig pik (`src/game/taunts.ts`), eller sin maskots egen replik. Piken sparas som `taunt` på avsändarens lagdokument, och alla telefoner visar den i fyra sekunder. Reglerna tillåter bara färdiga pikar, bara medan ett annat lag placerar, och högst en per lag var åttonde sekund enligt serverns klocka.
+
 ## Avvikelser från projektbriefen
 
 - `turnIndex` är turens löpnummer och fortsätter räkna mellan omgångar, så att gamla drag aldrig matchar en ny tur. Drag sparas som `moves/{turnIndex}`, ett per tur.

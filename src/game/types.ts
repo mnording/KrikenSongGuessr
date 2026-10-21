@@ -54,6 +54,8 @@ export type TeamDoc = {
   level?: TeamLevel;
   /** Familj: lagets egen gissning när det inte är dess tur. Ger inga kort. */
   guess?: { turnIndex: number; choice: number } | null;
+  /** Lagets senaste pik. at sätts av servern och styr spärren mellan pikar. */
+  taunt?: { id: string; at: Timestamp | null; turnIndex: number } | null;
   connected: boolean;
   lastSeen?: Timestamp | null;
   joinedAt?: Timestamp | null;

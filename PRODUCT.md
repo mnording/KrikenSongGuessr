@@ -38,6 +38,7 @@ The crew's own game. It is named for the group, it uses a song list the group ch
 - Stack: React 19, Vite, TypeScript, React Router, Firebase (Firestore with anonymous auth, Hosting), Spotify Web Playback SDK with PKCE. Live at https://krikensongguessr.web.app.
 - The host needs Spotify Premium. Teams need nothing.
 - Game modes, picked by the host in the lobby: **Tidslinje** (everyone places the song in their timeline by year) and **Familj** (for kids 9–14 playing with parents). In Familj each team picks a level when it joins: *Lätt* picks the artist among four, *Svår* places in the timeline. A Lätt team that picks right gets the card in year order, so everyone still races to the same number of cards. The teams whose turn it isn't can guess the artist too; it gives no cards, only the mascot's reaction. More modes are expected, so the mode is a setting rather than a separate route.
+- Taunts: while one team places, the waiting teams can send a fixed, friendly taunt (six shared lines plus one per mascot). Everyone in the game sees it for a few seconds with the sender's mascot. Each team can taunt at most once every 8 seconds.
 - When resolving a song on Spotify the host's phone prefers a clean (non-explicit) version when one exists.
 - Song list: `src/data/songs.json`, 65 songs with title, artist and original year, spanning from 1964 onwards.
 - Host actions include skipping a team (discard the card and draw a new one) and playing again (same code and teams, back to the lobby).

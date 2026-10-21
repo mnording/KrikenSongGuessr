@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChoiceCards } from '../components/ChoiceCards';
 import { ErrorText, LevelBadge, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
+import { TauntToasts } from '../components/Taunts';
 import { Timeline } from '../components/Timeline';
 import { MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
@@ -347,6 +348,7 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
 
   return (
     <>
+      <TauntToasts game={game} teams={teams} />
       <div className="turn-banner" style={team ? { background: team.color, color: textOn(team.color) } : undefined}>
         {team ? `${genitive(team.name)} tur` : 'Laget finns inte längre – hoppa över'}
       </div>

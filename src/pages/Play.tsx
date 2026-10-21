@@ -4,6 +4,7 @@ import { Link, Navigate, useParams } from 'react-router';
 import { ChoiceCards } from '../components/ChoiceCards';
 import { ErrorText, Loading, Screen } from '../components/Common';
 import { FamilyRound } from '../components/FamilyRound';
+import { TauntDock, TauntToasts } from '../components/Taunts';
 import { MascotPin } from '../components/Mascot';
 import { ProfileForm } from '../components/ProfileForm';
 import { TicketTimeline } from '../components/TicketTimeline';
@@ -304,6 +305,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
 
   return (
     <FestPage>
+      <TauntToasts game={game} teams={teams} />
       {result ? (
         <Wristband
           color={resultTeam?.color}
@@ -381,6 +383,8 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       />
 
       <ErrorText error={error} />
+      {/* Lagen som väntar kan pika laget som gissar. */}
+      {!myTurn && game.phase === 'placing' && <TauntDock code={code} game={game} me={me} target={current} />}
       {canPick && (
         <div className="sticky-actions">
           <button type="button" className="lock" disabled={pick === null || busy} onClick={lock}>
