@@ -47,6 +47,16 @@ export const REACTIONS: { id: string; text: string; kind: ReactionKind }[] = [
 
 export const REACTION_IDS = REACTIONS.map((r) => r.id);
 
+/** Fortsätt eller lås: de andra lagen hetsar laget som väljer, åt båda hållen. */
+export const DECISION_TAUNTS = [
+  { id: 'fortsatt', text: 'Fortsätt, fegisar! 🐔' },
+  { id: 'lasin', text: 'Lås in nu! 🔒' },
+  { id: 'vagar', text: 'Ni vågar inte! 😏' },
+  { id: 'girig', text: 'Inte för girig nu… 🤑' },
+] as const;
+
+export const DECISION_IDS: string[] = DECISION_TAUNTS.map((t) => t.id);
+
 /** Vilka reaktioner ett lag får välja bland efter avslöjandet. */
 export function reactionKind(isResultTeam: boolean, correct: boolean): ReactionKind {
   if (isResultTeam) return correct ? 'thanks' : 'comeback';
@@ -64,5 +74,10 @@ export const isReaction = (id: string) => REACTION_IDS.includes(id);
 /** Texten för en pik eller reaktion från ett visst lag, eller null om den inte finns. */
 export function tauntText(id: string, team: Pick<TeamDoc, 'mascot'>): string | null {
   if (id === SIGNATURE) return getMascot(team.mascot)?.signature ?? null;
-  return TAUNTS.find((t) => t.id === id)?.text ?? REACTIONS.find((r) => r.id === id)?.text ?? null;
+  return (
+    TAUNTS.find((t) => t.id === id)?.text ??
+    REACTIONS.find((r) => r.id === id)?.text ??
+    DECISION_TAUNTS.find((t) => t.id === id)?.text ??
+    null
+  );
 }

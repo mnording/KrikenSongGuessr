@@ -910,6 +910,20 @@ label {
   margin: 0 auto 6px;
 }
 
+/* Fortsätt eller lås på spelledarens telefon: osäkrade kort är streckade. */
+.card.at-risk {
+  border-style: dashed;
+  border-left-style: solid;
+}
+
+.card.at-risk .badge {
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.risk-count {
+  color: var(--muted);
+  font-weight: 600;
 input::placeholder {
   color: var(--muted);
   opacity: 1;

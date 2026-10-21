@@ -11,9 +11,11 @@ type Props = {
   onSelect?: (slot: number) => void;
   /** Kortet som just lades in markeras. */
   highlightCardId?: string | null;
+  /** Fortsätt eller lås: kort i lagets svit som inte är inlåsta än. */
+  riskIds?: readonly string[];
 };
 
-export function Timeline({ cards, color, selectable = false, selectedSlot = null, onSelect, highlightCardId }: Props) {
+export function Timeline({ cards, color, selectable = false, selectedSlot = null, onSelect, highlightCardId, riskIds = [] }: Props) {
   const slot = (index: number) => {
     const selected = selectedSlot === index;
     if (selectable) {
@@ -46,13 +48,14 @@ export function Timeline({ cards, color, selectable = false, selectedSlot = null
         <Fragment key={card.cardId}>
           <li className="timeline-slot">{slot(i)}</li>
           <li
-            className={`card${card.cardId === highlightCardId ? ' highlight' : ''}`}
+            className={`card${card.cardId === highlightCardId ? ' highlight' : ''}${riskIds.includes(card.cardId) ? ' at-risk' : ''}`}
             style={{ borderLeftColor: color }}
           >
             <span className="card-year">{card.year}</span>
             <span className="card-text">
               <span className="card-title">{cardLines(card).main}</span>
               <span className="card-artist">{cardLines(card).sub}</span>
+              {riskIds.includes(card.cardId) && <span className="badge muted">Ej inlåst</span>}
             </span>
             {card.imageUrl && <img className="card-art" src={card.imageUrl} alt="" loading="lazy" />}
           </li>

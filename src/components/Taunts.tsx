@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import { getMascot } from '../game/mascots';
 import { sendTaunt } from '../game/teamActions';
-import { isReaction, REACTIONS, reactionKind, SIGNATURE, TAUNT_COOLDOWN_MS, TAUNTS, tauntMood, tauntShownMs, tauntText } from '../game/taunts';
+import { DECISION_TAUNTS, isReaction, REACTIONS, reactionKind, SIGNATURE, TAUNT_COOLDOWN_MS, TAUNTS, tauntMood, tauntShownMs, tauntText } from '../game/taunts';
+import { isStreak, streakChoiceFor } from '../game/modes';
+import { canContinue } from '../engine/streak';
 import type { GameDoc, Team } from '../game/types';
 import { useNow } from '../hooks/misc';
 import { errorMessage, textOn } from '../util';
@@ -59,7 +61,8 @@ export function TauntToasts({ game, teams, inline = false }: { game: GameDoc; te
  * Knappen längst ner. Medan ett lag gissar kan de andra pika det. Efter avslöjandet kan alla reagera:
  * de andra gratulerar eller retas, och laget självt tackar eller lovar revansch.
  */
-export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me: Team }) {
+/** chooser: laget som väljer att fortsätta eller låsa in, så att hetsen slutar när det har valt. */
+export function TauntDock({ code, game, me, chooser }: { code: string; game: GameDoc; me: Team; chooser?: Team }) {
   const now = useNow(500);
   const [open, setOpen] = useState(false);
   const [sentAt, setSentAt] = useState(0);
@@ -72,6 +75,10 @@ export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me:
   const signature = getMascot(me.mascot)?.signature;
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const reactions = result ? REACTIONS.filter((r) => r.kind === reactionKind(result.teamUid === me.uid, result.correct)) : null;
+  // Fortsätt eller lås: medan ett annat lag väljer kan man hetsa det åt något håll.
+  const egging = Boolean(
+    result && result.teamUid !== me.uid && isStreak(game) && canContinue(result, game.cardsLeft) && !streakChoiceFor(game, chooser),
+  );
 
   /** at är tryckningens tidsstämpel, så att nedräkningen börjar exakt då. */
   const send = (id: string, at: number) => {
@@ -95,6 +102,14 @@ export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me:
         <ErrorText error={error} />
         {open && (
           <ul className="taunt-options" aria-label={reactions ? 'Välj en reaktion' : 'Välj en pik'}>
+            {egging &&
+              DECISION_TAUNTS.map((t) => (
+                <li key={t.id}>
+                  <button type="button" onClick={(e) => send(t.id, e.timeStamp)}>
+                    {t.text}
+                  </button>
+                </li>
+              ))}
             {reactions?.map((r) => (
               <li key={r.id}>
                 <button type="button" onClick={(e) => send(r.id, e.timeStamp)}>
@@ -121,7 +136,15 @@ export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me:
           </ul>
         )}
         <button type="button" className="taunt-open" aria-expanded={open} disabled={wait > 0} onClick={() => setOpen((v) => !v)}>
-          {wait > 0 ? `${reactions ? 'Reagera' : 'Pika'} igen om ${wait} s` : open ? 'Stäng' : reactions ? '🎉 Reagera' : '😏 Skicka en pik'}
+          {wait > 0
+            ? `${reactions && !egging ? 'Reagera' : 'Pika'} igen om ${wait} s`
+            : open
+              ? 'Stäng'
+              : egging
+                ? '😏 Hetsa dem'
+                : reactions
+                  ? '🎉 Reagera'
+                  : '😏 Skicka en pik'}
         </button>
       </div>
     </div>

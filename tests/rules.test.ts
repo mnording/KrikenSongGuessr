@@ -15,8 +15,8 @@ import {
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 import { MASCOTS } from '../src/game/mascots';
-import { FAST_UNDO_MS } from '../src/game/modes';
-import { REACTION_IDS, TAUNT_IDS } from '../src/game/taunts';
+import { FAST_UNDO_MS, STREAK_UNDO_MS } from '../src/game/modes';
+import { DECISION_IDS, REACTION_IDS, TAUNT_IDS } from '../src/game/taunts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const PROJECT = 'demo-krikensongguessr';
@@ -244,6 +244,89 @@ describe('teams', () => {
     // Första listan gäller under turen, andra efter avslöjandet.
     expect(lists[0], 'pikar').toEqual(TAUNT_IDS);
     expect(lists[1], 'reaktioner').toEqual(REACTION_IDS);
+    expect(lists[2], 'hets medan ett lag väljer').toEqual(DECISION_IDS);
+  });
+
+  describe('fortsätt eller lås', () => {
+    const won = (overrides: Record<string, Value> = {}) => ({
+      status: 'playing',
+      phase: 'revealed',
+      turnIndex: 4,
+      currentTeamUid: 't1',
+      settings: { targetLength: 7, streak: true },
+      lastResult: { teamUid: 't1', turnIndex: 4, correct: true, reachedTarget: false },
+      ...overrides,
+    });
+    const choose = (uid: string, action: string, turnIndex = 4) =>
+      updateDoc(doc(db(uid), 'games', CODE, 'teams', uid), { streakChoice: { turnIndex, action, at: serverTimestamp() } });
+
+    it('låter laget i tur välja efter sitt rätta svar', async () => {
+      await seed(won(), ['t1', 't2']);
+      await assertSucceeds(choose('t1', 'continue'));
+      await seed(won(), ['t1']);
+      await assertSucceeds(choose('t1', 'lock'));
+    });
+
+    it('stoppar andra lag, fel tur och okända val', async () => {
+      await seed(won(), ['t1', 't2']);
+      await assertFails(choose('t2', 'continue'));
+      await assertFails(choose('t1', 'continue', 3));
+      await assertFails(choose('t1', 'dubbla'));
+      await assertFails(updateDoc(doc(db('t1'), 'games', CODE, 'teams', 't1'), { streakChoice: { turnIndex: 4, action: 'lock', at: serverTimestamp(), extra: 1 } }));
+      // Tiden måste vara serverns, annars går ångerfönstret att flytta.
+      await assertFails(updateDoc(doc(db('t1'), 'games', CODE, 'teams', 't1'), { streakChoice: { turnIndex: 4, action: 'lock', at: new Date(Date.now() + 60_000) } }));
+    });
+
+    it('stoppar valet efter fel svar, efter vinst, under turen och utan inställningen', async () => {
+      await seed(won({ lastResult: { teamUid: 't1', turnIndex: 4, correct: false, reachedTarget: false } }), ['t1']);
+      await assertFails(choose('t1', 'continue'));
+      await seed(won({ lastResult: { teamUid: 't1', turnIndex: 4, correct: true, reachedTarget: true } }), ['t1']);
+      await assertFails(choose('t1', 'continue'));
+      await seed(won({ phase: 'placing' }), ['t1']);
+      await assertFails(choose('t1', 'lock'));
+      await seed(won({ settings: { targetLength: 7 } }), ['t1']);
+      await assertFails(choose('t1', 'lock'));
+    });
+
+    it('går bara att byta genom att ångra, en gång och inom tre sekunder', async () => {
+      await seed(won(), ['t1']);
+      const ref = doc(db('t1'), 'games', CODE, 'teams', 't1');
+      const undo = () => updateDoc(ref, { streakChoice: { turnIndex: 4, action: 'undone', at: serverTimestamp() } });
+      const again = (action: string) =>
+        updateDoc(ref, { streakChoice: { turnIndex: 4, action, at: serverTimestamp(), undone: true } });
+      await assertSucceeds(choose('t1', 'continue'));
+      await assertFails(choose('t1', 'lock'));
+      // Att nollställa valet går inte, bara att ångra.
+      await assertFails(updateDoc(ref, { streakChoice: null }));
+      await assertSucceeds(undo());
+      // Efter ångra måste valet märkas, så att det inte går att ångra igen.
+      await assertFails(choose('t1', 'lock'));
+      await assertSucceeds(again('lock'));
+      await assertFails(undo());
+      // Ett val som är äldre än fönstret står fast.
+      await adminSet(`games/${CODE}/teams/t1`, {
+        ...team(),
+        timeline: [],
+        streakChoice: { turnIndex: 4, action: 'lock', at: new Date(Date.now() - STREAK_UNDO_MS - 1000) },
+      });
+      await assertFails(undo());
+    });
+
+    it('har samma ångerfönster som appen', () => {
+      const seconds = Number(readFileSync('firestore.rules', 'utf8').match(/prior\.at \+ duration\.value\((\d+), 's'\)/)?.[1]);
+      expect(seconds * 1000).toBe(STREAK_UNDO_MS);
+    });
+
+    it('låter de andra lagen hetsa laget som väljer, men inte laget självt', async () => {
+      await seed(won(), ['t1', 't2']);
+      const hets = (uid: string, id: string) =>
+        updateDoc(doc(db(uid), 'games', CODE, 'teams', uid), { taunt: { id, at: serverTimestamp(), turnIndex: 4 } });
+      await assertFails(hets('t1', 'fortsatt'));
+      await assertSucceeds(hets('t2', 'fortsatt'));
+      // Efter fel finns inget att välja, och då inget att hetsa om.
+      await seed(won({ lastResult: { teamUid: 't1', turnIndex: 4, correct: false, reachedTarget: false } }), ['t3']);
+      await assertFails(hets('t3', 'lasin'));
+    });
   });
 
   it('låter spelledaren skriva tidslinje och ta bort lag', async () => {

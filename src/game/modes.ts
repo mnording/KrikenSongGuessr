@@ -53,3 +53,18 @@ export const LETTERS = ['A', 'B', 'C', 'D'];
 export function showsChoices(game: GameDoc, myTurn: boolean, byArtist: boolean): boolean {
   return gameMode(game) !== 'timeline' && Boolean(game.choices?.length) && (byArtist || !myTurn || game.phase === 'revealed');
 }
+
+/** Fortsätt eller lås. Saknas inställningen (spel från före funktionen) går turen vidare efter varje kort. */
+export const isStreak = (game: GameDoc) => game.settings.streak === true;
+
+/** Fortsätt eller lås: så länge laget kan ångra sitt val. Samma gräns står i firestore.rules. */
+export const STREAK_UNDO_MS = 3_000;
+
+/** Fortsätt eller lås: knapparna tar inte emot tryck direkt, så att ett reflextryck på Lås inte blir ett val. */
+export const STREAK_TAP_GUARD_MS = 600;
+
+/** Fortsätt eller lås: lagets gällande val för turen. Ett ångrat val räknas inte. */
+export function streakChoiceFor(game: GameDoc, team: TeamDoc | undefined): 'continue' | 'lock' | null {
+  const choice = team?.streakChoice;
+  return choice?.turnIndex === game.turnIndex && choice.action !== 'undone' ? choice.action : null;
+}

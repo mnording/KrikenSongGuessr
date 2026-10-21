@@ -6,6 +6,7 @@ import { ErrorText, Loading, Screen } from '../components/Common';
 import { FamilyRound } from '../components/FamilyRound';
 import { TauntDock, TauntToasts } from '../components/Taunts';
 import { UndoDock } from '../components/UndoDock';
+import { StreakDock } from '../components/StreakDock';
 import { MascotPin } from '../components/Mascot';
 import { ProfileForm } from '../components/ProfileForm';
 import { TicketTimeline } from '../components/TicketTimeline';
@@ -15,7 +16,9 @@ import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
 import { leaveGame, lockChoice, lockMove, selectSlot, setLevel, updateProfile } from '../game/teamActions';
 import { getMascot, MASCOTS, type MascotMood } from '../game/mascots';
-import { answersByChoice, choiceTexts, isFast, LEVELS, showsChoices } from '../game/modes';
+import { answersByChoice, choiceTexts, isFast, isStreak, LEVELS, showsChoices, streakChoiceFor } from '../game/modes';
+import { resultBand } from '../game/resultBand';
+import { atRisk, canContinue, splitScore, type Streak } from '../engine/streak';
 import { gameMode, isOnline, teamLevel, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -92,10 +95,11 @@ function FestPage({ children }: { children: ReactNode }) {
   );
 }
 
-type WristbandProps = { color?: string; mascot?: string; mood?: MascotMood; big: ReactNode; sub?: ReactNode; mine?: boolean };
+/** long: en fråga eller ett lagnamn i stället för ett kort ord. Mindre text, så att den inte avstavas. */
+type WristbandProps = { color?: string; mascot?: string; mood?: MascotMood; big: ReactNode; sub?: ReactNode; mine?: boolean; long?: boolean };
 
 /** Armbandet överst: vems skärm det är just nu. Spelas in på nytt när innehållet byts. Maskoten sitter där knappen satt. */
-function Wristband({ color, mascot, mood = 'idle', big, sub, mine = false }: WristbandProps) {
+function Wristband({ color, mascot, mood = 'idle', big, sub, mine = false, long = false }: WristbandProps) {
   const pinned = Boolean(getMascot(mascot));
   return (
     <header
@@ -104,7 +108,7 @@ function Wristband({ color, mascot, mood = 'idle', big, sub, mine = false }: Wri
       style={color ? { backgroundColor: color, color: textOn(color) } : undefined}
       role="status"
     >
-      <h1 className="wristband-big">{big}</h1>
+      <h1 className={`wristband-big${long ? ' long' : ''}`}>{big}</h1>
       {sub && <div className="wristband-sub">{sub}</div>}
       {pinned && <MascotPin mascot={mascot} mood={mood} animate className="wristband-pin" />}
     </header>
@@ -118,10 +122,12 @@ type BandsProps = {
   shownUid?: string;
   onShow?: (uid: string) => void;
   winnerUids?: string[];
+  /** Fortsätt eller lås: lagets osäkrade kort räknas för sig, "4+2". */
+  streak?: Streak | null;
 };
 
 /** Alla lag som armband i ett rutnät, så att ingen behöver skrolla i sidled. */
-function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = [] }: BandsProps) {
+function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = [], streak }: BandsProps) {
   return (
     <ul className={`bands${teams.length <= 8 ? ' few' : ''}`} aria-label={onShow ? 'Visa lagets tidslinje' : 'Lag'}>
       {teams.map((t) => {
@@ -136,11 +142,7 @@ function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = []
               {t.name}
               {offline && <span className="band-off">offline</span>}
             </span>
-            {showCount && (
-              <span className="band-count" aria-label={`${t.timeline?.length ?? 0} kort`}>
-                {t.timeline?.length ?? 0}
-              </span>
-            )}
+            {showCount && <BandCount team={t} streak={streak} />}
           </>
         );
         return (
@@ -158,6 +160,22 @@ function Bands({ teams, now, showCount = true, shownUid, onShow, winnerUids = []
         );
       })}
     </ul>
+  );
+}
+
+function BandCount({ team, streak }: { team: Team; streak?: Streak | null }) {
+  const { banked, risk } = splitScore(team.timeline ?? [], streak, team.uid);
+  return (
+    <span className="band-count">
+      {banked}
+      <span className="visually-hidden"> kort</span>
+      {risk > 0 && (
+        <span className="band-risk">
+          +{risk}
+          <span className="visually-hidden"> ej inlåsta</span>
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -315,17 +333,39 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const lockedText = 'Låst här';
   const showChoices = showsChoices(game, myTurn, byArtist);
 
+  // Fortsätt eller lås: efter ett rätt svar väljer laget i tur, och de andra ser att det funderar.
+  const choosing = Boolean(result && isStreak(game) && canContinue(result, game.cardsLeft));
+  const deciding = choosing && resultMine;
+  const choice = choosing ? streakChoiceFor(game, resultTeam) : null;
+  const risk = resultTeam ? atRisk(game.streak, resultTeam.uid).length : 0;
+  const lost = result?.lost ?? [];
+  // Inlåst syns direkt under ångerfönstret: korten blir stämplade biljetter.
+  const stamping = choice === 'lock' && resultTeam?.uid === shown.uid;
+  const band = result
+    ? resultBand({
+        correct: result.correct,
+        choosing,
+        choice,
+        mine: resultMine,
+        teamName: resultTeam?.name ?? 'Laget',
+        risk,
+        total: resultTeam?.timeline?.length ?? 0,
+        lost: lost.length,
+      })
+    : null;
+
   return (
     <FestPage>
       <TauntToasts game={game} teams={teams} />
-      {result ? (
+      {result && band ? (
         <Wristband
           color={resultTeam?.color}
           mascot={resultTeam?.mascot}
-          mood={result.correct ? 'happy' : 'sad'}
+          mood={band.mood}
           mine={resultMine}
-          big={result.correct ? 'Rätt!' : 'Fel!'}
-          sub={`${resultMine ? 'Ni' : (resultTeam?.name ?? 'Laget')} ${result.correct ? 'fick kortet' : 'missade'}`}
+          big={band.big}
+          sub={band.sub}
+          long={band.long}
         />
       ) : myTurn ? (
         <Wristband color={me.color} mascot={me.mascot} mine big="Er tur!" sub={me.name} />
@@ -333,7 +373,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         <Wristband color={current?.color} mascot={current?.mascot} big={current ? `${genitive(current.name)} tur` : 'Väntar…'} />
       )}
 
-      <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} />
+      <Bands teams={teams} now={now} shownUid={shown.uid} onShow={setViewUid} streak={game.streak} />
 
       {result && !(result.correct && result.teamUid === shown.uid) && (
         <div className="reveal">
@@ -345,13 +385,36 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
             </span>
             {result.card.imageUrl && <img className={`stub-art${result.card.film ? ' poster' : ''}`} src={result.card.imageUrl} alt="" />}
           </div>
+          {/* Fortsätt eller lås: korten som revs bort med felet, kvar som spöken tills nästa tur. */}
+          {lost.length > 0 && (
+            <ol className="ghosts" aria-label={`${lost.length} tappade kort`}>
+              {lost.map((card) => (
+                <li key={card.cardId} className="stub ghost">
+                  <span className="stub-year">{card.year}</span>
+                  <span className="stub-text">
+                    <span className="stub-title">{cardLines(card).main}</span>
+                    <span className="stub-artist">{cardLines(card).sub}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       )}
 
       {result?.reachedTarget && <p className="verdict">Det är klart – {game.settings.targetLength} kort!</p>}
 
       <p className="hint">
-        {result ? (
+        {deciding ? (
+          choice ? null : (
+            <>
+              <strong>Lås in</strong> så blir {risk === 1 ? 'kortet ert' : 'korten era'} och turen går vidare.{' '}
+              <strong>Fortsätt</strong> så kommer en låt till.
+            </>
+          )
+        ) : choosing ? (
+          choice ? null : 'Hetsa dem åt något håll!'
+        ) : result ? (
           'Väntar på nästa tur…'
         ) : myTurn && game.phase === 'placing' ? (
           locked ? (
@@ -392,12 +455,25 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         onSelect={choose}
         pendingText={locked ? lockedText : 'De funderar här…'}
         highlightCardId={result?.correct && result.teamUid === shown.uid ? result.card.cardId : null}
+        riskIds={stamping ? [] : atRisk(game.streak, shown.uid)}
+        stampedIds={stamping ? atRisk(game.streak, shown.uid) : []}
       />
 
       <ErrorText error={error} />
       {/* Lagen som väntar kan pika laget som gissar, och efter avslöjandet kan alla reagera. */}
-      {((!myTurn && game.phase === 'placing') || (game.phase === 'revealed' && game.lastResult)) && (
-        <TauntDock key={`${game.turnIndex}-${game.phase}`} code={code} game={game} me={me} />
+      {deciding && (
+        <StreakDock
+          code={code}
+          uid={me.uid}
+          turnIndex={game.turnIndex}
+          risk={risk}
+          chosen={choice}
+          record={me.streakChoice?.turnIndex === game.turnIndex ? me.streakChoice : null}
+        />
+      )}
+      {/* Laget som väljer behöver dockan till sina knappar. Det kan reagera när turen gått vidare. */}
+      {!deciding && ((!myTurn && game.phase === 'placing') || (game.phase === 'revealed' && game.lastResult)) && (
+        <TauntDock key={`${game.turnIndex}-${game.phase}`} code={code} game={game} me={me} chooser={resultTeam} />
       )}
       {myTurn && locked && game.phase === 'placing' && isFast(game) && lockedAt !== null && (
         <UndoDock code={code} turnIndex={game.turnIndex} lockedAt={lockedAt} onUndone={() => setLockedAt(null)} />

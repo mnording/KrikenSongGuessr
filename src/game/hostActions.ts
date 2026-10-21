@@ -15,7 +15,8 @@ import {
   type Song,
 } from '../engine/game';
 import { answerIndex, evaluateArtistChoice, evaluateFilmChoice, filmAnswerIndex, pickChoices, pickFilmChoices } from '../engine/artist';
-import { answersByChoice } from './modes';
+import { answersByChoice, isStreak } from './modes';
+import { canContinue, dropStreak, extendStreak } from '../engine/streak';
 import { toSongFilter, type SongFilter } from '../engine/library';
 import { db } from '../firebase';
 import { gameRef, moveRef, movesRef, privateRef, teamRef } from './refs';
@@ -40,7 +41,7 @@ export async function createGame(hostUid: string): Promise<string> {
         hostUid,
         status: 'lobby',
         phase: 'placing',
-        settings: { targetLength: DEFAULT_TARGET },
+        settings: { targetLength: DEFAULT_TARGET, streak: true },
         turnOrder: [],
         turnIndex: 0,
         currentTeamUid: null,
@@ -85,6 +86,12 @@ function choicesFor(game: GameDoc, song: Song, songs: Song[]) {
   if (mode === 'family') return pickChoices(song, songs);
   if (mode === 'film') return pickFilmChoices(song, songs);
   return null;
+}
+
+export async function setStreakMode(code: string, streak: boolean) {
+  const batch = writeBatch(db);
+  batch.update(gameRef(code), { 'settings.streak': streak });
+  await batch.commit();
 }
 
 export async function setFastMode(code: string, fastMode: boolean) {
@@ -144,6 +151,7 @@ export async function startGame(
       timeline: [startCards[i]],
       pendingSlot: null,
       guess: null,
+      streakChoice: null,
     });
   });
   const state: PrivateState = {
@@ -164,6 +172,7 @@ export async function startGame(
     endReason: null,
     cardsLeft: cardsLeft(first.deck),
     choices: choicesFor(game, state.currentCard!, songs),
+    streak: null,
   });
   await batch.commit();
   return state.currentCard!;
@@ -182,12 +191,18 @@ export async function reveal(code: string, game: GameDoc, team: Team, move: Move
   const evaluation = byChoice
     ? (mode === 'film' ? evaluateFilmChoice : evaluateArtistChoice)(timeline, choices, move.choice ?? -1, card)
     : { ...evaluatePlacement(timeline, move.slotIndex ?? -1, card), slotIndex: move.slotIndex ?? -1 };
+  // Fortsätt eller lås: rätt bygger på lagets svit, fel tar bort hela sviten ur tidslinjen.
+  const streak = isStreak(game);
+  const dropped = !evaluation.correct && streak ? dropStreak(timeline, game.streak, team.uid) : null;
   const batch = writeBatch(db);
   if (evaluation.correct) {
     batch.update(teamRef(code, team.uid), { timeline: evaluation.timeline });
+  } else if (dropped && dropped.lost.length > 0) {
+    batch.update(teamRef(code, team.uid), { timeline: dropped.timeline });
   }
   batch.update(gameRef(code), {
     phase: 'revealed',
+    ...(streak ? { streak: evaluation.correct ? extendStreak(game.streak, team.uid, card.cardId) : null } : {}),
     lastResult: {
       teamUid: team.uid,
       turnIndex: game.turnIndex,
@@ -197,6 +212,7 @@ export async function reveal(code: string, game: GameDoc, team: Team, move: Move
       reachedTarget: hasReachedTarget(evaluation.timeline, game.settings.targetLength),
       choice: byChoice ? (move.choice ?? null) : null,
       answer: mode === 'film' ? filmAnswerIndex(choices, card.film) : mode === 'family' ? answerIndex(choices, card.artist) : null,
+      lost: dropped?.lost ?? [],
     },
   });
   await batch.commit();
@@ -219,6 +235,9 @@ export async function finishGame(code: string, teams: Team[], endReason: GameDoc
 /**
  * Går till nästa lag. Används både efter avslöjandet och för att hoppa över ett lag
  * (då kasseras kortet). Returnerar nästa kort, eller null om spelet tog slut.
+ * Med Fortsätt eller lås betyder det att laget låser in: sviten nollställs och korten blir lagets.
+ * Ett lag som hoppas över mitt i en svit låser alltså också in.
+ * Med `sameTeam` fortsätter laget i stället med ett nytt kort och behåller sin svit.
  */
 export async function nextTurn(
   code: string,
@@ -226,7 +245,11 @@ export async function nextTurn(
   teams: Team[],
   state: PrivateState,
   songs: Song[],
+  { sameTeam = false }: { sameTeam?: boolean } = {},
 ): Promise<Song | null> {
+  if (sameTeam && !(isStreak(game) && game.phase === 'revealed' && game.lastResult && canContinue(game.lastResult, game.cardsLeft))) {
+    throw new Error('Laget kan inte fortsätta nu');
+  }
   const winners = teams.filter((t) => hasReachedTarget(t.timeline ?? [], game.settings.targetLength));
   if (winners.length > 0) {
     await finishGame(code, teams, 'target');
@@ -239,31 +262,40 @@ export async function nextTurn(
   }
   const card = songById(songs).get(drawn.cardId);
   if (!card) throw new Error(`Låten ${drawn.cardId} finns inte i låtlistan`);
-  const nextUid = nextTeamUid(game.turnOrder, game.currentTeamUid, new Set(teams.map((t) => t.uid)));
+  const nextUid = sameTeam ? game.currentTeamUid : nextTeamUid(game.turnOrder, game.currentTeamUid, new Set(teams.map((t) => t.uid)));
   if (!nextUid) {
     await finishGame(code, teams, 'host');
     return null;
   }
 
-  const batch = writeBatch(db);
-  batch.update(privateRef(code), { deckIndex: drawn.deck.deckIndex, currentCard: card });
-  batch.update(teamRef(code, nextUid), { pendingSlot: null });
-  batch.update(gameRef(code), {
-    phase: 'placing',
-    turnIndex: game.turnIndex + 1,
-    currentTeamUid: nextUid,
-    lastResult: null,
-    cardsLeft: cardsLeft(drawn.deck),
-    choices: choicesFor(game, card, songs),
+  // I en transaktion som läser turen igen: lagets val (via useStreakDecision) och spelledarens egna knappar
+  // kan hinna trigga samma steg två gånger, och då ska bara det första gå igenom.
+  return runTransaction(db, async (tx) => {
+    const current = (await tx.get(gameRef(code))).data() as GameDoc | undefined;
+    if (!current || current.turnIndex !== game.turnIndex || current.phase !== game.phase) {
+      throw new Error('Turen har redan gått vidare');
+    }
+    tx.update(privateRef(code), { deckIndex: drawn.deck.deckIndex, currentCard: card });
+    tx.update(teamRef(code, nextUid), { pendingSlot: null });
+    tx.update(gameRef(code), {
+      phase: 'placing',
+      turnIndex: game.turnIndex + 1,
+      currentTeamUid: nextUid,
+      lastResult: null,
+      cardsLeft: cardsLeft(drawn.deck),
+      choices: choicesFor(game, card, songs),
+      ...(sameTeam ? {} : { streak: null }),
+    });
+    return card;
   });
-  await batch.commit();
-  return card;
 }
 
 /** Tillbaka till lobbyn med samma lag. Nya lag kan också gå med. */
 export async function playAgain(code: string, teams: Team[]) {
   const batch = writeBatch(db);
-  for (const team of teams) batch.update(teamRef(code, team.uid), { timeline: [], pendingSlot: null, guess: null });
+  for (const team of teams) {
+    batch.update(teamRef(code, team.uid), { timeline: [], pendingSlot: null, guess: null, streakChoice: null });
+  }
   batch.update(gameRef(code), {
     status: 'lobby',
     phase: 'placing',
@@ -273,6 +305,7 @@ export async function playAgain(code: string, teams: Team[]) {
     winnerUids: [],
     endReason: null,
     choices: null,
+    streak: null,
   });
   batch.set(privateRef(code), { deckOrder: [], deckIndex: 0, currentCard: null }, { merge: true });
   await batch.commit();

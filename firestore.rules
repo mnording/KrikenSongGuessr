@@ -53,7 +53,7 @@ service cloud.firestore {
           || (signedIn()
             && uid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['name', 'color', 'mascot', 'level', 'connected', 'lastSeen', 'pendingSlot', 'guess', 'taunt'])
+                 .hasOnly(['name', 'color', 'mascot', 'level', 'connected', 'lastSeen', 'pendingSlot', 'guess', 'taunt', 'streakChoice'])
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['level'])
               || game(code).status == 'lobby')
             // Gissningen ger inga kort, men ska inte gå att ändra efter att svaret visats.
@@ -61,6 +61,8 @@ service cloud.firestore {
               || game(code).phase == 'placing')
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['taunt'])
               || validTaunt(code, uid, request.resource.data.taunt, resource.data))
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['streakChoice'])
+              || validStreakChoice(code, uid, request.resource.data.streakChoice, resource.data))
             && validProfile(request.resource.data));
 
         // Spelledaren tar bort lag, och ett lag får lämna i lobbyn.
@@ -144,11 +146,61 @@ service cloud.firestore {
             && game(code).currentTeamUid != uid
             && taunt.id in ['sakert', 'alla', 'ojoj', 'tick', 'tittar', 'snyggt', 'signatur'])
           || (game(code).phase == 'revealed'
-            && taunt.id in ['grattis', 'proffs', 'starkt', 'ojda', 'klurig', 'nasta', 'tack', 'latt', 'vanta', 'nastavar']))
+            && taunt.id in ['grattis', 'proffs', 'starkt', 'ojda', 'klurig', 'nasta', 'tack', 'latt', 'vanta', 'nastavar'])
+          // Fortsätt eller lås: de andra lagen hetsar laget som väljer.
+          || (game(code).phase == 'revealed'
+            && game(code).settings.get('streak', false) == true
+            && game(code).currentTeamUid != uid
+            && game(code).lastResult.correct == true
+            && game(code).lastResult.reachedTarget == false
+            && taunt.id in ['fortsatt', 'lasin', 'vagar', 'girig']))
         && taunt.turnIndex == game(code).turnIndex
         && (!('taunt' in before)
           || before.taunt == null
           || request.time > before.taunt.at + duration.value(8, 's'));
+    }
+
+    // Fortsätt eller lås: bara laget i tur, efter dess eget rätta svar som inte gav vinst, och bara när
+    // inställningen är på. Tiden är serverns. Spelledaren kollar själv att det finns kort kvar.
+    function validStreakChoice(code, uid, choice, before) {
+      return choice.keys().hasAll(['turnIndex', 'action', 'at'])
+        && choice.at == request.time
+        && choice.turnIndex == game(code).turnIndex
+        && game(code).status == 'playing'
+        && game(code).phase == 'revealed'
+        && (choice.action == 'undone'
+          ? undoStreakChoice(choice, priorStreakChoice(before, choice.turnIndex))
+          : newStreakChoice(code, uid, choice, priorStreakChoice(before, choice.turnIndex)));
+    }
+
+    // Lagets förra val under samma tur, eller null.
+    function priorStreakChoice(before, turnIndex) {
+      return 'streakChoice' in before && before.streakChoice != null && before.streakChoice.turnIndex == turnIndex
+        ? before.streakChoice
+        : null;
+    }
+
+    // Ångra: inom tre sekunder och bara en gång per tur, så att ingen kan hålla spelet stilla.
+    function undoStreakChoice(choice, prior) {
+      return choice.keys().hasOnly(['turnIndex', 'action', 'at'])
+        && prior != null
+        && prior.action in ['continue', 'lock']
+        && !('undone' in prior)
+        && request.time < prior.at + duration.value(3, 's');
+    }
+
+    // Ett nytt val när inget gäller för turen, eller ett sista val efter att ha ångrat (märkt undone).
+    function newStreakChoice(code, uid, choice, prior) {
+      return choice.keys().hasOnly(['turnIndex', 'action', 'at', 'undone'])
+        && choice.action in ['continue', 'lock']
+        && game(code).settings.get('streak', false) == true
+        && game(code).currentTeamUid == uid
+        && game(code).lastResult.teamUid == uid
+        && game(code).lastResult.correct == true
+        && game(code).lastResult.reachedTarget == false
+        && (prior == null
+          ? !('undone' in choice)
+          : prior.action == 'undone' && choice.get('undone', false) == true);
     }
 
     function validChoice(choice) {
