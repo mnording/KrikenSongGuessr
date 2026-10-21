@@ -52,6 +52,33 @@ Spotify-appen är i Development Mode. Sedan mars 2026 betyder det högst fem Spo
 - `src/spotify/` – PKCE med refresh (`auth.ts`), Web Playback SDK-spelaren på modulnivå (`player.ts`), låtlistan (`catalog.ts`).
 - `firestore.rules` – lagen läser aldrig `private/*`, drag bara från laget i tur under `placing`.
 - `tests/` – regeltester och ett helt spel med tre lag mot emulatorn.
+- `src/sentry.ts` – felrapporter, se nedan.
+
+## Felrapporter
+
+Sentry ser bara fel som **ingen fångar**. Det som kastas och aldrig fångas skickas automatiskt (Reacts hanterare i `src/main.tsx` och Sentrys globala hanterare). Allt som fångas i en `catch` eller `.catch()`, eller som kommer som text i ett event, syns bara på skärmen. Det var därför Spotifys "Cannot perform operation; no list was loaded." aldrig kom fram: SDK:n skickar sina fel som event, och appen visade dem utan att rapportera.
+
+**Regeln:** varje ställe som fångar ett fel och visar det, eller sväljer det, ska antingen rapportera det eller ha en kommentar som säger varför inte.
+
+```ts
+import { reportError } from '../sentry';
+
+try {
+  await playTrack(uri);
+} catch (err) {
+  reportError(err, 'spotify.play'); // först rapportera…
+  setError(`Musiken: ${errorMessage(err)}`); // …sedan visa
+}
+```
+
+- **Rapportera** fel som spelaren inte orsakat och inte kan rätta: Spotify, Firestore-skrivningar som borde ha gått, oväntade svar från API:er, fel i spelledarens handlingar.
+- **Fel som bara är text** (SDK-event, callbacks med `{ message }`) görs om till ett riktigt fel med `spotifyError(event, message)`, eller `new Error(...)` med ett tydligt `name`, så att Sentry får ett stackspår och kan gruppera dem.
+- **Rapportera inte** det som är väntat och redan har ett svar i gränssnittet: `permission-denied` när ångerfönstret eller pikspärren har stängt, en ny tur som gör ett drag inaktuellt, validering av formulär, och hjärtslag som misslyckas på dåligt nät (`.catch(() => {})` med en kommentar). Annars drunknar de riktiga felen.
+- **`area`** är en tagg i Sentry på formen `<område>.<vad>`, till exempel `spotify.playback_error`, `spotify.play`, `host.action`. Återanvänd en befintlig när det passar, så att filtren håller.
+- **Inga personuppgifter i felet.** Meddelandet går till Sentry. Lägg inte lagnamn (de skrivs av spelarna), e-post, tokens eller hela adresser i det. Spelkoden går bra.
+- **Testa** att ett nytt fel faktiskt rapporteras genom att mocka `@sentry/react`, som i `src/sentry.test.ts`.
+
+Utan `VITE_SENTRY_DSN` gör `reportError` ingenting, så det är ofarligt lokalt och i tester.
 
 ## Låtlistan
 
