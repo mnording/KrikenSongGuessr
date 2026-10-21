@@ -849,3 +849,47 @@ label {
     transform: translateY(-120%);
   }
 }
+
+/* Spelledarens låturval: tryckknappar för decennier och etiketter. */
+.songs-picker h2 {
+  margin-bottom: 0.25rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 2px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Vald: omvänd, och en bock så att det inte bara är färgen som skiljer. */
+.chip[aria-pressed='true'] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.chip[aria-pressed='true']::before {
+  content: '✓ ';
+}
+
+.songs-count {
+  margin: 0.25rem 0;
+  font-weight: 700;
+}
+
+/* Låtlistan: ett år som skiljer sig från Spotifys. */
+.year-off {
+  color: #fbbf24;
+  font-weight: 600;
+}

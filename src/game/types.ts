@@ -1,5 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { Song, TimelineCard } from '../engine/game';
+import type { SongFilter } from '../engine/library';
 
 export type GameStatus = 'lobby' | 'playing' | 'finished';
 export type GamePhase = 'placing' | 'revealed';
@@ -29,7 +30,8 @@ export type GameDoc = {
   status: GameStatus;
   phase: GamePhase;
   /** mode saknas i spel från före spellägena, och betyder då tidslinje. */
-  settings: { targetLength: number; mode?: GameMode };
+  /** songFilter saknas betyder alla låtar. */
+  settings: { targetLength: number; mode?: GameMode; songFilter?: SongFilter };
   turnOrder: string[];
   /** Turens nummer. Ökar hela tiden, även mellan omgångar, så att gamla drag aldrig matchar. */
   turnIndex: number;

@@ -2,10 +2,12 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChoiceCards } from '../components/ChoiceCards';
+import { SongPicker } from '../components/SongPicker';
 import { ErrorText, LevelBadge, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
 import { TauntToasts } from '../components/Taunts';
 import { Timeline } from '../components/Timeline';
 import { MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
+import { filterSongs } from '../engine/library';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePlayer, useSpotifyLoggedIn, useUser, useWakeLock } from '../hooks/misc';
 import {
@@ -83,6 +85,8 @@ export default function HostGame() {
 type ViewProps = { code: string; game: GameDoc; teams: Team[]; state: PrivateState | null; songs: Song[] };
 
 function HostView({ code, game, teams, state, songs }: ViewProps) {
+  // Spelet drar bara ur spelledarens urval. Det går bara att ändra i lobbyn.
+  const playable = filterSongs(songs, game.settings.songFilter);
   const player = usePlayer();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -125,7 +129,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
   const advance = () =>
     act(async () => {
       if (!state) throw new Error('Kortleken saknas');
-      const card = await nextTurn(code, game, teams, state, songs);
+      const card = await nextTurn(code, game, teams, state, playable);
       if (card) await playCard(card, game.turnIndex + 1);
     });
 
@@ -147,10 +151,12 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
           game={game}
           teams={teams}
           busy={busy}
+          songs={songs}
+          playable={playable}
           playerReady={player.status === 'ready'}
           onStart={() =>
             act(async () => {
-              const card = await startGame(code, game, teams, songs, albumArt);
+              const card = await startGame(code, game, teams, playable, albumArt);
               await playCard(card, game.turnIndex + 1);
             })
           }
@@ -233,16 +239,19 @@ type LobbyProps = {
   game: GameDoc;
   teams: Team[];
   busy: boolean;
+  songs: Song[];
+  playable: Song[];
   playerReady: boolean;
   onStart: () => void;
 };
 
-function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
+function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart }: LobbyProps) {
   const now = useNow();
   const joinUrl = `${window.location.origin}/join/${code}`;
   const target = game.settings.targetLength;
   const tooFew = teams.length < MIN_TEAMS;
   const tooMany = teams.length > MAX_TEAMS;
+  const tooFewSongs = playable.length <= teams.length;
   const [modeError, setModeError] = useState<string | null>(null);
 
   return (
@@ -303,7 +312,9 @@ function Lobby({ code, game, teams, busy, playerReady, onStart }: LobbyProps) {
         </div>
       </div>
 
-      <button type="button" className="primary big" disabled={busy || tooFew || tooMany || !playerReady} onClick={onStart}>
+      <SongPicker code={code} game={game} songs={songs} playable={playable} teamCount={teams.length} />
+
+      <button type="button" className="primary big" disabled={busy || tooFew || tooMany || tooFewSongs || !playerReady} onClick={onStart}>
         Starta spelet
       </button>
       {tooFew && <p className="muted small">Minst {MIN_TEAMS} lag behövs.</p>}

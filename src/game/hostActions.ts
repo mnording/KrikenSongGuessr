@@ -15,6 +15,7 @@ import {
   type Song,
 } from '../engine/game';
 import { answerIndex, evaluateArtistChoice, pickChoices } from '../engine/artist';
+import type { SongFilter } from '../engine/library';
 import { db } from '../firebase';
 import { gameRef, moveRef, movesRef, privateRef, teamRef } from './refs';
 import { gameMode, teamLevel, type GameDoc, type GameMode, type MoveDoc, type PrivateState, type Team } from './types';
@@ -72,6 +73,13 @@ export async function setMode(code: string, mode: GameMode) {
 
 /** Familj-läget visar fyra artister för varje kort. Tidslinjeläget har inga. */
 const choicesFor = (game: GameDoc, song: Song, songs: Song[]) => (gameMode(game) === 'family' ? pickChoices(song, songs) : null);
+
+/** Bara i lobbyn: vilka låtar spelet drar ur. */
+export async function setSongFilter(code: string, filter: SongFilter) {
+  const batch = writeBatch(db);
+  batch.update(gameRef(code), { 'settings.songFilter': filter });
+  await batch.commit();
+}
 
 export async function removeTeam(code: string, uid: string) {
   const batch = writeBatch(db);

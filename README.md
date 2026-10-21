@@ -43,7 +43,11 @@ Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 
 ## Låtlistan
 
-`src/data/songs.json` har titel, artist och originalår. `spotifyUri` får vara tom: spelledarens telefon söker då fram spåret första gången och sparar svaret lokalt. Öppna `/host/songs`, tryck **Hitta alla på Spotify**, provspela, rätta fel träffar med ✎ och ladda ner en `songs.json` med URI:erna ifyllda.
+`src/data/songs.json` har titel, artist, originalår och ibland etiketter (`tags`). `spotifyUri` får vara tom: spelledarens telefon söker då fram spåret första gången och sparar svaret lokalt. Öppna `/host/songs`, tryck **Hitta alla på Spotify**, provspela, rätta fel träffar med ✎ och ladda ner en `songs.json` med URI:erna ifyllda.
+
+**Årtalen är hela spelet.** `year` ska vara låtens första utgivning, inte remasterns eller samlingens. Tryck **Kontrollera år** i `/host/songs` för att se låtar där Spotifys albumår skiljer sig med mer än ett år. Ofta är det en remaster, men ibland fel år hos oss.
+
+**Etiketter:** `svenskt`, `melodifestivalen`, `dans`, `rock` och `hiphop` (listan finns i `src/engine/library.ts`). En låt kan ha flera eller inga. I lobbyn väljer spelledaren decennier och etiketter (`settings.songFilter` på spelet). Inget valt betyder alla låtar, och inom decennier respektive etiketter räcker det att låten passar en av dem. Lobbyn varnar när urvalet kan ta slut innan någon vinner, och går inte att starta med färre låtar än lag. Film- och barnlåtar väntar på ett eget spelläge (#13).
 
 Spotify-sökningen väljer en ren version (utan svordomar) när det finns en lika bra träff. Låtar med `spotifyUri` i `songs.json`, eller som redan finns i spelledarens cache, påverkas inte.
 

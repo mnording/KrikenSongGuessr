@@ -6,6 +6,7 @@ import { spotifyFetch } from './auth';
 
 const CACHE_KEY = 'spotify.uriCache';
 const IMAGE_CACHE_KEY = 'spotify.imageCache';
+const YEAR_CACHE_KEY = 'spotify.yearCache';
 
 let songsPromise: Promise<Song[]> | null = null;
 
@@ -86,6 +87,7 @@ export async function resolveUri(song: Song): Promise<string> {
   if (!best) throw new Error(`Hittade inte "${song.title}" med ${song.artist} på Spotify`);
   writeCache(song.id, best.uri);
   writeCache(song.id, pickImage(best.album?.images), IMAGE_CACHE_KEY);
+  writeCache(song.id, best.album?.release_date?.slice(0, 4) ?? null, YEAR_CACHE_KEY);
   return best.uri;
 }
 
@@ -117,8 +119,30 @@ export function cachedUri(song: Song): string | null {
 
 export function overrideUri(songId: string, uri: string) {
   writeCache(songId, uri);
-  // Bilden hör till det gamla spåret. Den hämtas om nästa gång.
+  // Bilden och året hör till det gamla spåret. De hämtas om nästa gång.
   writeCache(songId, null, IMAGE_CACHE_KEY);
+  writeCache(songId, null, YEAR_CACHE_KEY);
+}
+
+/**
+ * Utgivningsåret för albumet som spåret ligger på, för att kontrollera årtalen i songs.json.
+ * Ett senare år betyder ofta en remaster eller samling, så det är en varning, inte ett facit.
+ * Null om låten inte är kopplad till Spotify än eller om året inte gick att hämta.
+ */
+export async function spotifyYear(song: Song): Promise<number | null> {
+  const cached = readCache(YEAR_CACHE_KEY)[song.id];
+  if (cached) return Number(cached);
+  const uri = cachedUri(song);
+  if (!uri) return null;
+  try {
+    const res = await spotifyFetch(`/tracks/${encodeURIComponent(uri.split(':')[2])}`);
+    if (!res.ok) return null;
+    const year = ((await res.json()) as SearchTrack).album?.release_date?.slice(0, 4) ?? null;
+    writeCache(song.id, year, YEAR_CACHE_KEY);
+    return year ? Number(year) : null;
+  } catch {
+    return null;
+  }
 }
 
 type PlaylistItem = { item?: SearchTrack | null; track?: SearchTrack | null };
