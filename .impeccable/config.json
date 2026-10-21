@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-10-17T04:17:06.694Z",
         "reason": "Claude: spent decision mockup comparing two directions (incl. the unchosen Jukebox fonts); not shipped UI"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/index.css"
+        ],
+        "createdAt": "2026-10-20T16:15:57.039Z",
+        "reason": "DESIGN.md documents it: the host timeline card carries a 6px team-colour left edge as the team marker; predates this session (commit 14f5a63)"
       }
     ]
   }
