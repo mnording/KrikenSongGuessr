@@ -123,16 +123,19 @@ service cloud.firestore {
           && validChoice(data.choice));
     }
 
-    // En pik: en av de färdiga, bara medan ett annat lag gissar, och högst en var åttonde sekund.
-    // Tiden kommer från servern, så spärren går inte att fuska förbi.
+    // En pik medan ett annat lag gissar, eller en reaktion efter avslöjandet (från alla lag).
+    // Bara färdiga texter, och högst en var åttonde sekund. Tiden kommer från servern,
+    // så spärren går inte att fuska förbi.
     function validTaunt(code, uid, taunt, before) {
       return taunt.keys().hasOnly(['id', 'at', 'turnIndex'])
         && taunt.keys().hasAll(['id', 'at', 'turnIndex'])
-        && taunt.id in ['sakert', 'alla', 'ojoj', 'tick', 'tittar', 'snyggt', 'signatur']
         && taunt.at == request.time
         && game(code).status == 'playing'
-        && game(code).phase == 'placing'
-        && game(code).currentTeamUid != uid
+        && ((game(code).phase == 'placing'
+            && game(code).currentTeamUid != uid
+            && taunt.id in ['sakert', 'alla', 'ojoj', 'tick', 'tittar', 'snyggt', 'signatur'])
+          || (game(code).phase == 'revealed'
+            && taunt.id in ['grattis', 'proffs', 'starkt', 'ojda', 'klurig', 'nasta', 'tack', 'latt', 'vanta', 'nastavar']))
         && taunt.turnIndex == game(code).turnIndex
         && (!('taunt' in before)
           || before.taunt == null
