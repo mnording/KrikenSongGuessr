@@ -383,8 +383,10 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       />
 
       <ErrorText error={error} />
-      {/* Lagen som väntar kan pika laget som gissar. */}
-      {!myTurn && game.phase === 'placing' && <TauntDock key={game.turnIndex} code={code} game={game} me={me} />}
+      {/* Lagen som väntar kan pika laget som gissar, och efter avslöjandet kan alla reagera. */}
+      {((!myTurn && game.phase === 'placing') || game.phase === 'revealed') && (
+        <TauntDock key={`${game.turnIndex}-${game.phase}`} code={code} game={game} me={me} />
+      )}
       {canPick && (
         <div className="sticky-actions">
           <button type="button" className="lock" disabled={pick === null || busy} onClick={lock}>

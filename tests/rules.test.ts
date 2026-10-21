@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 import { MASCOTS } from '../src/game/mascots';
-import { TAUNT_IDS } from '../src/game/taunts';
+import { REACTION_IDS, TAUNT_IDS } from '../src/game/taunts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const PROJECT = 'demo-krikensongguessr';
@@ -225,9 +225,22 @@ describe('teams', () => {
     await assertSucceeds(updateDoc(ref, taunt));
   });
 
-  it('har samma pikar som appen', () => {
-    const list = readFileSync('firestore.rules', 'utf8').match(/taunt\.id in \[([^\]]+)\]/)?.[1] ?? '';
-    expect(list.split(',').map((s) => s.trim().replace(/'/g, ''))).toEqual(TAUNT_IDS);
+  it('låter alla lag reagera efter avslöjandet, men inte pika', async () => {
+    await seed({ status: 'playing', phase: 'revealed', turnIndex: 4, currentTeamUid: 't2' }, ['t1', 't2']);
+    const reaction = (id: string) => ({ taunt: { id, at: serverTimestamp(), turnIndex: 4 } });
+    await assertFails(updateDoc(doc(db('t1'), 'games', CODE, 'teams', 't1'), reaction('ojoj')));
+    await assertSucceeds(updateDoc(doc(db('t1'), 'games', CODE, 'teams', 't1'), reaction('grattis')));
+    // Laget som just avslöjades får svara.
+    await assertSucceeds(updateDoc(doc(db('t2'), 'games', CODE, 'teams', 't2'), reaction('tack')));
+    await seed({ status: 'playing', phase: 'placing', turnIndex: 5, currentTeamUid: 't2' }, ['t3']);
+    await assertFails(updateDoc(doc(db('t3'), 'games', CODE, 'teams', 't3'), { taunt: { id: 'grattis', at: serverTimestamp(), turnIndex: 5 } }));
+  });
+
+  it('har samma pikar och reaktioner som appen', () => {
+    const lists = [...readFileSync('firestore.rules', 'utf8').matchAll(/taunt\.id in \[([^\]]+)\]/g)].map((m) =>
+      m[1].split(',').map((s) => s.trim().replace(/'/g, '')),
+    );
+    expect(lists).toEqual([TAUNT_IDS, REACTION_IDS]);
   });
 
   it('låter spelledaren skriva tidslinje och ta bort lag', async () => {
