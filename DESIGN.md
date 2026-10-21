@@ -328,8 +328,8 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 
 ### Taunts
 Teams waiting for their turn tease the team that is placing, in `src/components/Taunts.tsx`.
-- **Dock:** waiting teams get a docked button "😏 Pika <lag>": Night Raised fill, 2px Acid Lime edge, display face at 1.4rem. It opens a list on a Night Raised panel above it: the team's own mascot line first (with its pin), then six shared lines, each a left-aligned Ticket Paper slab of 48px. After sending, the button turns dashed and muted with a countdown ("Pika igen om 7 s") for the 8-second cooldown.
-- **Toast:** every phone in the game, the host's included, shows the taunt as a small wristband in the sender's team colour (22px pill, contrast-chosen text) with the sender's mascot in its cheeky mood, sliding in at the top over the wristband for four seconds. At most three stack. It is not pressable and never covers the dock.
+- **Dock:** waiting teams get a docked button "😏 Skicka en pik": Night Raised fill, 2px Acid Lime edge, display face at 1.4rem. It opens a Night Raised panel above it: the team's own mascot line across the full width (with its pin), then the six shared lines in two columns, each a left-aligned Ticket Paper slab of 48px, so the panel covers about half the screen. The panel closes when a taunt is sent or the turn changes. After sending, the button turns dashed and muted with a countdown ("Pika igen om 7 s"), counted from the team's stored taunt so it survives a reload.
+- **Toast:** every phone in the game, the host's included, shows the taunt as a small wristband in the sender's team colour (22px pill, contrast-chosen text) with the sender's mascot in its cheeky mood. On team phones it slides in at the top over the wristband; on the host it sits in the flow under the turn banner so the banner always shows whose turn it is. It stays 3 s plus 60 ms per character (at most 7 s), at most two stack, and it is not pressable.
 - **Copy:** only fixed, friendly lines, so nothing needs moderating.
 
 ### Artist Choices (Familj)

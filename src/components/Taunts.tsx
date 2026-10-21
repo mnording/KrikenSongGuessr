@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { getMascot } from '../game/mascots';
 import { sendTaunt } from '../game/teamActions';
-import { SIGNATURE, TAUNT_COOLDOWN_MS, TAUNT_SHOWN_MS, TAUNTS, tauntText } from '../game/taunts';
+import { SIGNATURE, TAUNT_COOLDOWN_MS, TAUNTS, tauntShownMs, tauntText } from '../game/taunts';
 import type { GameDoc, Team } from '../game/types';
 import { useNow } from '../hooks/misc';
 import { errorMessage, textOn } from '../util';
@@ -15,7 +15,7 @@ type Shown = { key: string; team: Team; text: string };
  * Nya pikar under turen, som små armband överst på skärmen i fyra sekunder.
  * Pikar som fanns när skärmen öppnades visas inte igen.
  */
-export function TauntToasts({ game, teams }: { game: GameDoc; teams: Team[] }) {
+export function TauntToasts({ game, teams, inline = false }: { game: GameDoc; teams: Team[]; inline?: boolean }) {
   const now = useNow(500);
   // När varje pik först syntes här, i den här telefonens tid. 0 betyder att den var gammal redan då.
   const [seen, setSeen] = useState<Record<string, number> | null>(null);
@@ -35,9 +35,9 @@ export function TauntToasts({ game, teams }: { game: GameDoc; teams: Team[] }) {
     if (fresh.length > 0) setSeen({ ...seen, ...Object.fromEntries(fresh.map((t) => [t.key, now])) });
   }
 
-  const visible = current.filter((t) => seen?.[t.key] && now - seen[t.key] < TAUNT_SHOWN_MS).slice(-3);
+  const visible = current.filter((t) => seen?.[t.key] && now - seen[t.key] < tauntShownMs(t.text)).slice(-2);
   return (
-    <div className="taunts" aria-live="polite">
+    <div className={`taunts${inline ? ' inline' : ''}`} aria-live="polite">
       {visible.map(({ key, team, text }) => (
         <p key={key} className="taunt" style={{ backgroundColor: team.color, color: textOn(team.color) }}>
           <MascotPin mascot={team.mascot} mood="cheeky" animate />
@@ -51,13 +51,16 @@ export function TauntToasts({ game, teams }: { game: GameDoc; teams: Team[] }) {
 }
 
 /** Knappen längst ner för lagen som väntar på sin tur. Öppnar de färdiga pikarna. */
-export function TauntDock({ code, game, me, target }: { code: string; game: GameDoc; me: Team; target: Team | undefined }) {
+export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me: Team }) {
   const now = useNow(500);
   const [open, setOpen] = useState(false);
   const [sentAt, setSentAt] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Spärren räknas från lagets sparade pik, så att den håller även efter omladdning.
+  // Tryckningen räknas direkt, innan servern hunnit svara.
+  const last = Math.max(sentAt, me.taunt?.at?.toMillis() ?? 0);
   // useNow tickar varannan halvsekund, så klockan kan ligga lite efter tryckningen.
-  const wait = Math.min(TAUNT_COOLDOWN_MS / 1000, Math.ceil((sentAt + TAUNT_COOLDOWN_MS - now) / 1000));
+  const wait = Math.min(TAUNT_COOLDOWN_MS / 1000, Math.ceil((last + TAUNT_COOLDOWN_MS - now) / 1000));
   const signature = getMascot(me.mascot)?.signature;
 
   const send = (id: string) => {
@@ -65,8 +68,13 @@ export function TauntDock({ code, game, me, target }: { code: string; game: Game
     setError(null);
     setSentAt(Date.now());
     sendTaunt(code, me.uid, game.turnIndex, id).catch((err) => {
-      setSentAt(0);
-      setError(`Piken gick inte fram: ${errorMessage(err)}`);
+      // Nekad betyder oftast att spärren eller turen tog slut. Då står nedräkningen kvar.
+      if ((err as { code?: string }).code === 'permission-denied') {
+        setError('Piken gick inte fram. Vänta lite och försök igen.');
+      } else {
+        setSentAt(0);
+        setError(`Piken gick inte fram: ${errorMessage(err)}`);
+      }
     });
   };
 
@@ -77,7 +85,7 @@ export function TauntDock({ code, game, me, target }: { code: string; game: Game
         {open && (
           <ul className="taunt-options" aria-label="Välj en pik">
             {signature && (
-              <li>
+              <li className="taunt-signature">
                 <button type="button" onClick={() => send(SIGNATURE)}>
                   <MascotPin mascot={me.mascot} mood="cheeky" />
                   {signature}
@@ -94,7 +102,7 @@ export function TauntDock({ code, game, me, target }: { code: string; game: Game
           </ul>
         )}
         <button type="button" className="taunt-open" aria-expanded={open} disabled={wait > 0} onClick={() => setOpen((v) => !v)}>
-          {wait > 0 ? `Pika igen om ${wait} s` : open ? 'Stäng' : `😏 Pika ${target?.name ?? 'laget'}`}
+          {wait > 0 ? `Pika igen om ${wait} s` : open ? 'Stäng' : '😏 Skicka en pik'}
         </button>
       </div>
     </div>

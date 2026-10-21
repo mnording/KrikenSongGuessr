@@ -348,10 +348,11 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
 
   return (
     <>
-      <TauntToasts game={game} teams={teams} />
       <div className="turn-banner" style={team ? { background: team.color, color: textOn(team.color) } : undefined}>
         {team ? `${genitive(team.name)} tur` : 'Laget finns inte längre – hoppa över'}
       </div>
+      {/* Under banderollen, så att den alltid visar vems tur det är. */}
+      <TauntToasts game={game} teams={teams} inline />
 
       <section className="music-panel">
         {needsPlay ? (

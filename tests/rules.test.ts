@@ -46,9 +46,10 @@ async function assertFails(p: Promise<unknown>) {
 }
 
 // Skrivningar förbi reglerna via emulatorns REST-API med "owner"-token.
-type Value = string | number | boolean | null | Value[] | { [k: string]: Value };
+type Value = string | number | boolean | null | Date | Value[] | { [k: string]: Value };
 function encode(v: Value): unknown {
   if (v === null) return { nullValue: null };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (typeof v === 'string') return { stringValue: v };
   if (typeof v === 'boolean') return { booleanValue: v };
   if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
@@ -211,6 +212,17 @@ describe('teams', () => {
     await assertFails(updateDoc(doc(db('t2'), 'games', CODE, 'teams', 't2'), taunt()));
     await seed({ status: 'playing', phase: 'revealed', turnIndex: 4, currentTeamUid: 't2' }, ['t3']);
     await assertFails(updateDoc(doc(db('t3'), 'games', CODE, 'teams', 't3'), taunt()));
+  });
+
+  it('räknar spärren från lagets förra pik', async () => {
+    await seed({ status: 'playing', phase: 'placing', turnIndex: 4, currentTeamUid: 't2' }, ['t1', 't2']);
+    const ref = doc(db('t1'), 'games', CODE, 'teams', 't1');
+    const taunt = { taunt: { id: 'ojoj', at: serverTimestamp(), turnIndex: 4 } };
+    const before = (seconds: number) => ({ ...team(), timeline: [], taunt: { id: 'tick', at: new Date(Date.now() - seconds * 1000), turnIndex: 3 } });
+    await adminSet(`games/${CODE}/teams/t1`, before(3));
+    await assertFails(updateDoc(ref, taunt));
+    await adminSet(`games/${CODE}/teams/t1`, before(9));
+    await assertSucceeds(updateDoc(ref, taunt));
   });
 
   it('har samma pikar som appen', () => {

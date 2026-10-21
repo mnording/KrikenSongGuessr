@@ -56,7 +56,7 @@ Spelledaren väljer läge i lobbyn (`settings.mode` på spelet, saknas det gäll
 
 ## Pikar
 
-Medan ett lag placerar kan de andra lagen skicka en färdig pik (`src/game/taunts.ts`), eller sin maskots egen replik. Piken sparas som `taunt` på avsändarens lagdokument, och alla telefoner visar den i fyra sekunder. Reglerna tillåter bara färdiga pikar, bara medan ett annat lag placerar, och högst en per lag var åttonde sekund enligt serverns klocka.
+Medan ett lag placerar kan de andra lagen skicka en färdig pik (`src/game/taunts.ts`), eller sin maskots egen replik. Piken sparas som `taunt` på avsändarens lagdokument, och alla telefoner visar den i några sekunder (längre för längre text). Reglerna tillåter bara färdiga pikar, bara medan ett annat lag placerar, och högst en per lag var åttonde sekund enligt serverns klocka.
 
 ## Avvikelser från projektbriefen
 

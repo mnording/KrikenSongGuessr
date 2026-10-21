@@ -5,8 +5,10 @@ import type { TeamDoc } from './types';
 /** Så länge ett lag måste vänta mellan två pikar. Samma gräns står i firestore.rules. */
 export const TAUNT_COOLDOWN_MS = 8_000;
 
-/** Så länge en pik syns på skärmen. */
-export const TAUNT_SHOWN_MS = 4_000;
+/** Så länge en pik syns: längre för längre text, så att den hinner läsas i ett stökigt rum. */
+export function tauntShownMs(text: string): number {
+  return Math.min(7_000, 3_000 + text.length * 60);
+}
 
 export const TAUNTS = [
   { id: 'sakert', text: 'Säker på det? 😏' },

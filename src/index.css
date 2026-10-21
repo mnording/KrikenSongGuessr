@@ -816,6 +816,13 @@ label {
   pointer-events: none;
 }
 
+/* Spelledaren: i flödet under turbanderollen, i stället för över den. */
+.taunts.inline {
+  position: static;
+  max-width: none;
+  margin: 8px 0 0;
+}
+
 .taunt {
   display: flex;
   align-items: center;

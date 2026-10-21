@@ -668,6 +668,7 @@
 /* Listan ligger på en egen yta, så att tidslinjen bakom inte syns igenom. */
 .taunt-options {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
   padding: 8px;
@@ -691,6 +692,11 @@
   font: inherit;
   font-weight: 700;
   text-align: left;
+}
+
+/* Maskotens egen replik är längst och får hela bredden. */
+.taunt-options .taunt-signature {
+  grid-column: 1 / -1;
 }
 
 .taunt-options .mascot-pin {
