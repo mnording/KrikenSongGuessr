@@ -423,8 +423,11 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
         </div>
       )}
       {gameMode(game) === 'film' && (
-        <p className="fest-foot">
-          Filmaffischer från <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">TMDB</a>. Appen använder
+        <p className="fest-foot tmdb-credit">
+          <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">
+            <img src="/tmdb-logo.svg" alt="TMDB" />
+          </a>
+          Filmaffischer från TMDB. Appen använder
           TMDB:s API men är inte godkänd eller certifierad av TMDB.
         </p>
       )}

@@ -332,7 +332,7 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 
 ### Film cards
 - In Film mode a stub shows the film as its title line and "song – artist" as its second line; the year is the premiere year. Its picture is the film poster from TMDB in poster proportions (44×64px instead of the 44px square album art), falling back to Spotify album art. The host's answer panel and result say the film first.
-- In Film mode the team footer carries the TMDB attribution ("Filmaffischer från TMDB …"), as TMDB's terms require.
+- In Film mode the team footer carries the TMDB attribution: TMDB's "alt short" logo (`public/tmdb-logo.svg`, their own green-to-blue gradient, 12px tall, linked to themoviedb.org) above "Filmaffischer från TMDB …", as TMDB's terms require. The film list in `/host/songs` carries the same.
 
 ### Taunts
 Teams waiting for their turn tease the team that is placing, in `src/components/Taunts.tsx`.

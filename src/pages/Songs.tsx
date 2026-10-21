@@ -287,8 +287,11 @@ export default function Songs() {
         </button>
       </div>
       {films && (
-        <p className="muted small">
-          Filmdata och affischer från <a href="https://www.themoviedb.org">TMDB</a>. Appen använder TMDB:s API men är inte
+        <p className="muted small tmdb-credit">
+          <a href="https://www.themoviedb.org">
+            <img src="/tmdb-logo.svg" alt="TMDB" />
+          </a>
+          Filmdata och affischer från TMDB. Appen använder TMDB:s API men är inte
           godkänd eller certifierad av TMDB.
         </p>
       )}
