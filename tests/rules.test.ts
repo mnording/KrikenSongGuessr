@@ -290,6 +290,30 @@ describe('moves', () => {
     await assertSucceeds(setDoc(ref, { ...base, choice: 2 }));
   });
 
+  it('kräver serverns tid på draget, så att ångerfönstret inte går att flytta', async () => {
+    await seed(playing, ['t1']);
+    await assertFails(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), { ...move(), createdAt: new Date(Date.now() + 60_000) }));
+    await assertSucceeds(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), { ...move(), createdAt: serverTimestamp() }));
+  });
+
+  it('låter laget ångra sitt drag i snabbläget, men bara i fem sekunder', async () => {
+    await seed({ ...playing, settings: { targetLength: 7, fastMode: true } }, ['t1', 't2']);
+    const ref = doc(db('t1'), 'games', CODE, 'moves', '3');
+    await assertSucceeds(setDoc(ref, { ...move(), createdAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(db('t2'), 'games', CODE, 'moves', '3')));
+    await assertSucceeds(deleteDoc(ref));
+    // Ett gammalt drag går inte att ångra.
+    await adminSet(`games/${CODE}/moves/3`, { ...move(), createdAt: new Date(Date.now() - 6_000) });
+    await assertFails(deleteDoc(ref));
+  });
+
+  it('låter inte laget ångra utan snabbläget', async () => {
+    await seed(playing, ['t1']);
+    const ref = doc(db('t1'), 'games', CODE, 'moves', '3');
+    await assertSucceeds(setDoc(ref, { ...move(), createdAt: serverTimestamp() }));
+    await assertFails(deleteDoc(ref));
+  });
+
   it('låter inte ett drag ändras när det är lagt', async () => {
     await seed(playing, ['t1']);
     await assertSucceeds(setDoc(doc(db('t1'), 'games', CODE, 'moves', '3'), move()));

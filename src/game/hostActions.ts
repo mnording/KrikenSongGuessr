@@ -74,6 +74,12 @@ export async function setMode(code: string, mode: GameMode) {
 /** Familj-läget visar fyra artister för varje kort. Tidslinjeläget har inga. */
 const choicesFor = (game: GameDoc, song: Song, songs: Song[]) => (gameMode(game) === 'family' ? pickChoices(song, songs) : null);
 
+export async function setFastMode(code: string, fastMode: boolean) {
+  const batch = writeBatch(db);
+  batch.update(gameRef(code), { 'settings.fastMode': fastMode });
+  await batch.commit();
+}
+
 /** Bara i lobbyn: vilka låtar spelet drar ur. */
 export async function setSongFilter(code: string, filter: SongFilter) {
   const batch = writeBatch(db);

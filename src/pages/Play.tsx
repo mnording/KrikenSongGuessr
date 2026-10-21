@@ -5,6 +5,7 @@ import { ChoiceCards } from '../components/ChoiceCards';
 import { ErrorText, Loading, Screen } from '../components/Common';
 import { FamilyRound } from '../components/FamilyRound';
 import { TauntDock, TauntToasts } from '../components/Taunts';
+import { UndoDock } from '../components/UndoDock';
 import { MascotPin } from '../components/Mascot';
 import { ProfileForm } from '../components/ProfileForm';
 import { TicketTimeline } from '../components/TicketTimeline';
@@ -14,7 +15,7 @@ import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
 import { leaveGame, lockChoice, lockMove, selectSlot, setLevel, updateProfile } from '../game/teamActions';
 import { getMascot, MASCOTS, type MascotMood } from '../game/mascots';
-import { LEVELS, showsChoices } from '../game/modes';
+import { isFast, LEVELS, showsChoices } from '../game/modes';
 import { gameMode, isOnline, teamLevel, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -244,6 +245,8 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const move = useDoc<MoveDoc>(moveRef(code, game.turnIndex));
   const [slot, setSlot] = useState<number | null>(null);
   const [pick, setPick] = useState<number | null>(null);
+  // Snabbläget: när laget låste, för att räkna ner ångerfönstret.
+  const [lockedAt, setLockedAt] = useState<number | null>(null);
   const [slotTurn, setSlotTurn] = useState(game.turnIndex);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -256,6 +259,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
     setSlotTurn(game.turnIndex);
     setSlot(null);
     setPick(null);
+    setLockedAt(null);
     setError(null);
     setViewUid(null);
   }
@@ -276,10 +280,12 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
     void selectSlot(code, me.uid, index).catch(() => {});
   };
 
-  const lock = async () => {
+  /** at är tryckningens tidsstämpel, så att ångerfönstret räknas från just då. */
+  const lock = async (at: number) => {
     if (byArtist ? pick === null : slot === null) return;
     setBusy(true);
     setError(null);
+    setLockedAt(performance.timeOrigin + at);
     try {
       if (byArtist) await lockChoice(code, me.uid, game.turnIndex, pick!);
       else await lockMove(code, me.uid, game.turnIndex, slot!);
@@ -343,7 +349,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
           'Väntar på nästa tur…'
         ) : myTurn && game.phase === 'placing' ? (
           locked ? (
-            'Låst! Väntar på att spelledaren avslöjar.'
+            isFast(game) ? 'Låst! Svaret visas om några sekunder.' : 'Låst! Väntar på att spelledaren avslöjar.'
           ) : byArtist ? (
             <>
               Lyssna och tryck på artisten som sjunger. <strong>Tryck sedan Lås.</strong>
@@ -387,9 +393,12 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       {((!myTurn && game.phase === 'placing') || (game.phase === 'revealed' && game.lastResult)) && (
         <TauntDock key={`${game.turnIndex}-${game.phase}`} code={code} game={game} me={me} />
       )}
+      {myTurn && locked && game.phase === 'placing' && isFast(game) && lockedAt !== null && (
+        <UndoDock code={code} turnIndex={game.turnIndex} lockedAt={lockedAt} onUndone={() => setLockedAt(null)} />
+      )}
       {canPick && (
         <div className="sticky-actions">
-          <button type="button" className="lock" disabled={pick === null || busy} onClick={lock}>
+          <button type="button" className="lock" disabled={pick === null || busy} onClick={(e) => void lock(e.timeStamp)}>
             {pick === null ? 'Välj en artist' : busy ? 'Låser…' : 'Lås'}
           </button>
         </div>
@@ -401,7 +410,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
               Visa vår tidslinje
             </button>
           ) : (
-            <button type="button" className="lock" disabled={slot === null || busy} onClick={lock}>
+            <button type="button" className="lock" disabled={slot === null || busy} onClick={(e) => void lock(e.timeStamp)}>
               {slot === null ? 'Välj en lucka' : busy ? 'Låser…' : 'Lås'}
             </button>
           )}

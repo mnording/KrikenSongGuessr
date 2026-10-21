@@ -17,6 +17,11 @@ export const MODES: CardOption<GameMode>[] = [
   },
 ];
 
+/** Snabbläget: så länge laget kan ångra sitt drag. Samma gräns står i firestore.rules. */
+export const FAST_UNDO_MS = 5_000;
+
+export const isFast = (game: GameDoc) => game.settings.fastMode === true;
+
 /** Bokstäverna framför artisterna, så att det är lätt att ropa ut svaret. */
 export const LETTERS = ['A', 'B', 'C', 'D'];
 

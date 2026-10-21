@@ -1,5 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { useCallback, useEffect, useState } from 'react';
+import { getDoc } from 'firebase/firestore';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChoiceCards } from '../components/ChoiceCards';
 import { SongPicker } from '../components/SongPicker';
@@ -18,12 +19,13 @@ import {
   removeTeam,
   reveal,
   saveDeviceId,
+  setFastMode,
   setMode,
   setTargetLength,
   startGame,
 } from '../game/hostActions';
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
-import { MODES } from '../game/modes';
+import { FAST_UNDO_MS, isFast, MODES } from '../game/modes';
 import { gameMode, teamLevel, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
 import { albumArt, loadSongs, resolveUri } from '../spotify/catalog';
@@ -312,6 +314,21 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
         </div>
       </div>
 
+      <div className="setting">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={isFast(game)}
+          onClick={() => void setFastMode(code, !isFast(game)).catch(() => {})}
+        >
+          Snabbläge
+        </button>
+        <p className="muted small">
+          När ett lag låser har det {FAST_UNDO_MS / 1000} sekunder att ångra sig. Sedan visas svaret direkt, utan att du
+          behöver trycka. Nästa låt startar du fortfarande själv.
+        </p>
+      </div>
+
       <SongPicker code={code} game={game} songs={songs} playable={playable} teamCount={teams.length} />
 
       <button type="button" className="primary big" disabled={busy || tooFew || tooMany || tooFewSongs || !playerReady} onClick={onStart}>
@@ -350,6 +367,25 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
 
   const team = teams.find((t) => t.uid === game.currentTeamUid);
   const card = state?.currentCard;
+
+  // Snabbläget: avslöja själv när lagets ångerfönster har gått ut. Tiden räknas från när den här
+  // telefonen ser draget, så att klockor som går olika inte spelar roll, med lite marginal.
+  const latest = useRef({ team, onReveal, busy });
+  useEffect(() => {
+    latest.current = { team, onReveal, busy };
+  });
+  const lockedAt = move.data?.createdAt?.toMillis() ?? null;
+  const fast = isFast(game);
+  useEffect(() => {
+    if (!fast || game.phase !== 'placing' || lockedAt === null) return;
+    const id = setTimeout(() => {
+      void getDoc(moveRef(code, game.turnIndex)).then((snap) => {
+        const { team: current, onReveal: reveal, busy: working } = latest.current;
+        if (snap.exists() && current && !working) reveal(current, snap.data() as MoveDoc);
+      });
+    }, FAST_UNDO_MS + 800);
+    return () => clearTimeout(id);
+  }, [fast, game.phase, lockedAt, code, game.turnIndex]);
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const selectedSlot = move.data?.slotIndex ?? (game.phase === 'placing' ? (team?.pendingSlot ?? null) : null);
   const byArtist = Boolean(team && gameMode(game) === 'family' && teamLevel(team) === 'easy');
@@ -420,7 +456,7 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
       {game.phase === 'placing' && (
         <p className="move-status">
           {move.data
-            ? `${team?.name ?? 'Laget'} har låst ${pickedName ?? 'sitt svar'}.`
+            ? `${team?.name ?? 'Laget'} har låst ${pickedName ?? 'sitt svar'}.${fast ? ' Svaret visas automatiskt om några sekunder.' : ''}`
             : `Väntar på att ${team?.name ?? 'laget'} ${byArtist ? 'väljer artist' : 'placerar'}…`}
         </p>
       )}

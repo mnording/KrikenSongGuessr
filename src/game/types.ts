@@ -31,7 +31,8 @@ export type GameDoc = {
   phase: GamePhase;
   /** mode saknas i spel från före spellägena, och betyder då tidslinje. */
   /** songFilter saknas betyder alla låtar. */
-  settings: { targetLength: number; mode?: GameMode; songFilter?: SongFilter };
+  /** fastMode: laget har några sekunder att ångra sig, sedan avslöjar spelledarens telefon själv. */
+  settings: { targetLength: number; mode?: GameMode; songFilter?: SongFilter; fastMode?: boolean };
   turnOrder: string[];
   /** Turens nummer. Ökar hela tiden, även mellan omgångar, så att gamla drag aldrig matchar. */
   turnIndex: number;
