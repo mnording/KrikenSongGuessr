@@ -46,7 +46,7 @@ export function Setup() {
             Använd kontot som har Premium. Första gången godkänner du villkoren, och Spotify kan be dig bekräfta din
             e-post. Kom sedan tillbaka till den här fliken.
           </p>
-          <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer" className="button">
+          <a href="https://developer.spotify.com/dashboard/create" target="_blank" rel="noreferrer" className="button">
             Öppna Spotify for Developers
             <span className="visually-hidden"> (öppnas i ny flik)</span>
           </a>
