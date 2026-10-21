@@ -308,7 +308,7 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
           value={gameMode(game)}
           onChange={(mode) => {
             setModeError(null);
-            setMode(code, mode).catch((err) => setModeError(`Kunde inte byta läge: ${errorMessage(err)}`));
+            setMode(code, mode, game.settings.songFilter).catch((err) => setModeError(`Kunde inte byta läge: ${errorMessage(err)}`));
           }}
         />
         <ErrorText error={modeError} />

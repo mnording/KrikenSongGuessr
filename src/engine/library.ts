@@ -10,6 +10,11 @@ export type SongFilter = { decades: number[]; tags: SongTag[] };
 
 export const decadeOf = (year: number) => Math.floor(year / 10) * 10;
 
+/** Ett urval som alltid har båda listorna, även om spelet sparat ett ofullständigt eller inget alls. */
+export function toSongFilter(filter: Partial<SongFilter> | undefined | null): SongFilter {
+  return { decades: filter?.decades ?? [], tags: filter?.tags ?? [] };
+}
+
 /** Decennierna som finns i listan, i ordning. */
 export function decadesIn(songs: readonly Song[]): number[] {
   return [...new Set(songs.map((s) => decadeOf(s.year)))].sort((a, b) => a - b);

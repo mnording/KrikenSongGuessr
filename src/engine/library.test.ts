@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import films from '../data/films.json';
 import songs from '../data/songs.json';
 import type { Song } from './game';
-import { decadeOf, decadesIn, filterSongs, hasEnoughSongs, SONG_TAGS, songsNeeded } from './library';
+import { decadeOf, decadesIn, filterSongs, hasEnoughSongs, SONG_TAGS, songsNeeded, toSongFilter } from './library';
 
 const list = songs as Song[];
 const song = (year: number, tags?: Song['tags']): Song => ({ id: `s${year}${tags?.join('')}`, spotifyUri: '', title: 'T', artist: 'A', year, tags });
@@ -33,6 +33,13 @@ describe('låtbiblioteket', () => {
 
 describe('urvalet', () => {
   const pool = [song(1965, ['rock']), song(1985, ['svenskt', 'rock']), song(1987, ['dans']), song(2015)];
+
+  it('fyller i det som saknas i ett sparat urval', () => {
+    expect(toSongFilter(undefined)).toEqual({ decades: [], tags: [] });
+    expect(toSongFilter({ tags: [] })).toEqual({ decades: [], tags: [] });
+    expect(toSongFilter({ decades: [1980] })).toEqual({ decades: [1980], tags: [] });
+    expect(filterSongs(pool, { tags: [] } as never)).toHaveLength(4);
+  });
 
   it('tar alla låtar när inget är valt', () => {
     expect(filterSongs(pool, undefined)).toHaveLength(4);

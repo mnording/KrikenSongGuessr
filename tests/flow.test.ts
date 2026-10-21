@@ -213,6 +213,8 @@ describe('ett helt spel', () => {
     as('host');
     const code = await createGame('host');
     await setMode(code, 'film');
+    // Ett spel utan urval får ett helt urval, inte bara etiketter (det kraschade lobbyn).
+    expect((await hostSnapshot(code)).game.settings.songFilter).toEqual({ decades: [], tags: [] });
     as('a');
     await joinGame(code, 'a', 'Lag A', 'kicki');
     as('b');

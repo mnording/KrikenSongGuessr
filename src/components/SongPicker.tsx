@@ -1,7 +1,7 @@
 // Spelledarens urval i lobbyn: vilka decennier och etiketter spelet drar låtar ur.
 import { useState } from 'react';
 import type { Song } from '../engine/game';
-import { decadesIn, hasEnoughSongs, SONG_TAGS, songsNeeded, type SongFilter, type SongTag } from '../engine/library';
+import { decadesIn, hasEnoughSongs, SONG_TAGS, songsNeeded, toSongFilter, type SongFilter, type SongTag } from '../engine/library';
 import { setSongFilter } from '../game/hostActions';
 import type { GameDoc } from '../game/types';
 import { errorMessage } from '../util';
@@ -33,7 +33,7 @@ export function SongPicker({ code, game, songs, playable, teamCount, showTags = 
   const [error, setError] = useState<string | null>(null);
   // Valet visas direkt och sparas sedan. Spelledaren är ensam om att skriva, så två snabba tryck
   // ska inte vänta på varandras svar från Firestore.
-  const [filter, setFilter] = useState<SongFilter>(game.settings.songFilter ?? { decades: [], tags: [] });
+  const [filter, setFilter] = useState<SongFilter>(toSongFilter(game.settings.songFilter));
   const needed = songsNeeded(teamCount, game.settings.targetLength);
 
   const save = (choice: SongFilter) => {
