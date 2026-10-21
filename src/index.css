@@ -829,8 +829,10 @@ label {
   gap: 10px;
   margin: 0;
   padding: 6px 14px 6px 6px;
-  /* Bläckkanten skiljer lappen från ett armband i samma färg, till exempel när laget i tur tackar. */
+  /* Bläckkant och en ljus ring utanför skiljer lappen från ett armband i samma färg,
+     till exempel när laget i tur tackar. */
   border: 2px solid rgb(23 18 46 / 0.85);
+  outline: 2px solid rgb(244 245 248 / 0.9);
   border-radius: 22px;
   font-weight: 700;
   line-height: 1.25;

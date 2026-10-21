@@ -384,7 +384,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
 
       <ErrorText error={error} />
       {/* Lagen som väntar kan pika laget som gissar, och efter avslöjandet kan alla reagera. */}
-      {((!myTurn && game.phase === 'placing') || game.phase === 'revealed') && (
+      {((!myTurn && game.phase === 'placing') || (game.phase === 'revealed' && game.lastResult)) && (
         <TauntDock key={`${game.turnIndex}-${game.phase}`} code={code} game={game} me={me} />
       )}
       {canPick && (

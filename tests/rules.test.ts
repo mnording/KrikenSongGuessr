@@ -240,7 +240,9 @@ describe('teams', () => {
     const lists = [...readFileSync('firestore.rules', 'utf8').matchAll(/taunt\.id in \[([^\]]+)\]/g)].map((m) =>
       m[1].split(',').map((s) => s.trim().replace(/'/g, '')),
     );
-    expect(lists).toEqual([TAUNT_IDS, REACTION_IDS]);
+    // Första listan gäller under turen, andra efter avslöjandet.
+    expect(lists[0], 'pikar').toEqual(TAUNT_IDS);
+    expect(lists[1], 'reaktioner').toEqual(REACTION_IDS);
   });
 
   it('låter spelledaren skriva tidslinje och ta bort lag', async () => {

@@ -135,7 +135,7 @@ service cloud.firestore {
             && game(code).currentTeamUid != uid
             && taunt.id in ['sakert', 'alla', 'ojoj', 'tick', 'tittar', 'snyggt', 'signatur'])
           || (game(code).phase == 'revealed'
-            && taunt.id in ['grattis', 'proffs', 'tur', 'ojda', 'nara', 'nasta', 'tack', 'latt', 'vanta', 'nastan']))
+            && taunt.id in ['grattis', 'proffs', 'starkt', 'ojda', 'klurig', 'nasta', 'tack', 'latt', 'vanta', 'nastavar']))
         && taunt.turnIndex == game(code).turnIndex
         && (!('taunt' in before)
           || before.taunt == null

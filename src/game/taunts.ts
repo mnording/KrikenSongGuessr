@@ -35,14 +35,14 @@ export type ReactionKind = 'cheer' | 'tease' | 'thanks' | 'comeback';
 export const REACTIONS: { id: string; text: string; kind: ReactionKind }[] = [
   { id: 'grattis', text: 'Grattis! 🎉', kind: 'cheer' },
   { id: 'proffs', text: 'Proffs! 🏆', kind: 'cheer' },
-  { id: 'tur', text: 'Ren tur… 🍀', kind: 'cheer' },
+  { id: 'starkt', text: 'Starkt jobbat! 👏', kind: 'cheer' },
   { id: 'ojda', text: 'Oj då! 😅', kind: 'tease' },
-  { id: 'nara', text: 'Nära skjuter ingen hare 🐇', kind: 'tease' },
+  { id: 'klurig', text: 'Den var klurig! 🤔', kind: 'tease' },
   { id: 'nasta', text: 'Bättre lycka nästa gång 💪', kind: 'tease' },
   { id: 'tack', text: 'Tack, tack! 🙇', kind: 'thanks' },
   { id: 'latt', text: 'Lätt som en plätt 😎', kind: 'thanks' },
   { id: 'vanta', text: 'Vänta bara! 😤', kind: 'comeback' },
-  { id: 'nastan', text: 'Det var ju nästan! 🤏', kind: 'comeback' },
+  { id: 'nastavar', text: 'Nästa är vår! 🔥', kind: 'comeback' },
 ];
 
 export const REACTION_IDS = REACTIONS.map((r) => r.id);
@@ -58,6 +58,8 @@ export function tauntMood(id: string): MascotMood {
   const kind = REACTIONS.find((r) => r.id === id)?.kind;
   return kind === 'cheer' || kind === 'thanks' ? 'happy' : 'cheeky';
 }
+
+export const isReaction = (id: string) => REACTION_IDS.includes(id);
 
 /** Texten för en pik eller reaktion från ett visst lag, eller null om den inte finns. */
 export function tauntText(id: string, team: Pick<TeamDoc, 'mascot'>): string | null {

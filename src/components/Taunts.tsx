@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { getMascot } from '../game/mascots';
 import { sendTaunt } from '../game/teamActions';
-import { REACTIONS, reactionKind, SIGNATURE, TAUNT_COOLDOWN_MS, TAUNTS, tauntMood, tauntShownMs, tauntText } from '../game/taunts';
+import { isReaction, REACTIONS, reactionKind, SIGNATURE, TAUNT_COOLDOWN_MS, TAUNTS, tauntMood, tauntShownMs, tauntText } from '../game/taunts';
 import type { GameDoc, Team } from '../game/types';
 import { useNow } from '../hooks/misc';
 import { errorMessage, textOn } from '../util';
@@ -36,13 +36,18 @@ export function TauntToasts({ game, teams, inline = false }: { game: GameDoc; te
   }
 
   const visible = current.filter((t) => seen?.[t.key] && now - seen[t.key] < tauntShownMs(t.text)).slice(-2);
+  // En reaktion från ett annat lag säger vem den gäller, så att den inte blandas ihop med svaret på den.
+  const resultTeam = teams.find((t) => t.uid === game.lastResult?.teamUid);
+  const target = (id: string, from: Team) =>
+    isReaction(id) && resultTeam && resultTeam.uid !== from.uid ? ` till ${resultTeam.name}` : '';
   return (
     <div className={`taunts${inline ? ' inline' : ''}`} aria-live="polite">
       {visible.map(({ key, team, text, id }) => (
         <p key={key} className="taunt" style={{ backgroundColor: team.color, color: textOn(team.color) }}>
           <MascotPin mascot={team.mascot} mood={tauntMood(id)} animate />
           <span>
-            <strong>{team.name}:</strong> {text}
+            <strong>{team.name}</strong>
+            {target(id, team)}: {text}
           </span>
         </p>
       ))}
@@ -68,15 +73,15 @@ export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me:
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const reactions = result ? REACTIONS.filter((r) => r.kind === reactionKind(result.teamUid === me.uid, result.correct)) : null;
 
-  const send = (id: string) => {
+  /** at är tryckningens tidsstämpel, så att nedräkningen börjar exakt då. */
+  const send = (id: string, at: number) => {
     setOpen(false);
     setError(null);
-    // Klockan från useNow räcker: nedräkningen är ändå begränsad till åtta sekunder.
-    setSentAt(now);
+    setSentAt(performance.timeOrigin + at);
     sendTaunt(code, me.uid, game.turnIndex, id).catch((err) => {
       // Nekad betyder oftast att spärren eller turen tog slut. Då står nedräkningen kvar.
       if ((err as { code?: string }).code === 'permission-denied') {
-        setError('Det gick inte fram. Vänta lite och försök igen.');
+        setError('Det gick inte fram. Rundan kan ha gått vidare, eller så behöver ni vänta lite.');
       } else {
         setSentAt(0);
         setError(`Piken gick inte fram: ${errorMessage(err)}`);
@@ -92,14 +97,14 @@ export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me:
           <ul className="taunt-options" aria-label={reactions ? 'Välj en reaktion' : 'Välj en pik'}>
             {reactions?.map((r) => (
               <li key={r.id}>
-                <button type="button" onClick={() => send(r.id)}>
+                <button type="button" onClick={(e) => send(r.id, e.timeStamp)}>
                   {r.text}
                 </button>
               </li>
             ))}
             {!reactions && signature && (
               <li className="taunt-signature">
-                <button type="button" onClick={() => send(SIGNATURE)}>
+                <button type="button" onClick={(e) => send(SIGNATURE, e.timeStamp)}>
                   <MascotPin mascot={me.mascot} mood="cheeky" />
                   {signature}
                 </button>
@@ -108,7 +113,7 @@ export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me:
             {!reactions &&
               TAUNTS.map((t) => (
                 <li key={t.id}>
-                  <button type="button" onClick={() => send(t.id)}>
+                  <button type="button" onClick={(e) => send(t.id, e.timeStamp)}>
                     {t.text}
                   </button>
                 </li>
@@ -116,7 +121,7 @@ export function TauntDock({ code, game, me }: { code: string; game: GameDoc; me:
           </ul>
         )}
         <button type="button" className="taunt-open" aria-expanded={open} disabled={wait > 0} onClick={() => setOpen((v) => !v)}>
-          {wait > 0 ? `Vänta ${wait} s` : open ? 'Stäng' : reactions ? '🎉 Reagera' : '😏 Skicka en pik'}
+          {wait > 0 ? `${reactions ? 'Reagera' : 'Pika'} igen om ${wait} s` : open ? 'Stäng' : reactions ? '🎉 Reagera' : '😏 Skicka en pik'}
         </button>
       </div>
     </div>
