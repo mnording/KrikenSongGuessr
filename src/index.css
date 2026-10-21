@@ -924,4 +924,288 @@ label {
 .risk-count {
   color: var(--muted);
   font-weight: 600;
+input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* Guiden för nya spelledare (/host/guide). */
+.notice {
+  border: 1px solid var(--border);
+}
+
+.notice a,
+.trouble code {
+  color: #93c5fd;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist > li {
+  border-radius: var(--radius);
+}
+
+.checklist > li.current {
+  padding-bottom: 16px;
+  background: var(--surface);
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 52px;
+  padding: 0 16px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+
+.checklist > li.todo .step-head {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+button.step-head {
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.step-number {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.checklist > li.current .step-number {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.step-check {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+.step-check circle {
+  fill: var(--primary);
+}
+
+.step-check path {
+  fill: none;
+  stroke: var(--primary-text);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.step-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0 16px 0 56px;
+}
+
+.step-body p {
+  margin: 0;
+}
+
+.step-body form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.step-body form p:first-child {
+  margin-bottom: 0.5rem;
+}
+
+.step-body label {
+  margin: 0;
+}
+
+.field-error {
+  margin: 0;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.step-done {
+  margin-top: 0.25rem;
+}
+
+.copy-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.copy-row code {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.copy-row .button {
+  flex: none;
+}
+
+.handoff {
+  border: 1px solid var(--primary);
+}
+
+.handoff-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.handoff-qr p {
+  margin: 0;
+}
+
+.trouble {
+  margin: 2rem 0 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.trouble summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  list-style: none;
+  min-height: 52px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trouble summary:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.trouble dl {
+  margin: 0;
+}
+
+.trouble dt {
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.trouble dd {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.kriken-app {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 380px) {
+  .step-body {
+    padding-left: 16px;
+  }
+}
+
+.trouble summary::-webkit-details-marker {
+  display: none;
+}
+
+.trouble summary::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease-out;
+}
+
+.trouble[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.kriken-app .link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+}
+
+.handoff-qr .copy-row {
+  justify-content: center;
+}
+
+h3.step-head {
+  margin: 0;
+}
+
+.step-head:focus {
+  outline: none;
+}
+
+.step-head:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: -3px;
+}
+
+.copy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.copy-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.copy-field p {
+  margin: 0;
+}
+
+.handoff h2:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trouble summary::before {
+    transition: none;
+  }
 }

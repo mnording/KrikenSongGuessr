@@ -10,6 +10,7 @@ const HostStart = lazy(() => import('./pages/HostStart'));
 const HostGame = lazy(() => import('./pages/HostGame'));
 const Songs = lazy(() => import('./pages/Songs'));
 const Callback = lazy(() => import('./pages/Callback'));
+const HostGuide = lazy(() => import('./pages/hostGuide/HostGuide'));
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/play/:code" element={<Play />} />
           <Route path="/host" element={<HostStart />} />
           <Route path="/host/songs" element={<Songs />} />
+          <Route path="/host/guide" element={<HostGuide />} />
           <Route path="/host/:code" element={<HostGame />} />
           <Route path="/callback" element={<Callback />} />
           <Route path="*" element={<Navigate to="/" replace />} />
