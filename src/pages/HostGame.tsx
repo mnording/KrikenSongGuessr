@@ -1,5 +1,5 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChoiceCards } from '../components/ChoiceCards';
 import { SongPicker } from '../components/SongPicker';
@@ -10,6 +10,9 @@ import { cardLines, MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } fr
 import { filterSongs, hasEnoughSongs } from '../engine/library';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useAutoReveal } from '../hooks/autoReveal';
+import { useStreakDecision } from '../hooks/streakDecision';
+import { atRisk, canContinue } from '../engine/streak';
+import { HostStreakFallback, HostStreakNote, StreakScore } from '../components/HostStreak';
 import { useNow, usePlayer, useSpotifyLoggedIn, useUser, useWakeLock } from '../hooks/misc';
 import {
   finishGame,
@@ -20,13 +23,14 @@ import {
   reveal,
   saveDeviceId,
   setFastMode,
+  setStreakMode,
   setMode,
   setTargetLength,
   startGame,
 } from '../game/hostActions';
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
-import { answersByChoice, choiceTexts, FAST_UNDO_MS, isFast, MODES } from '../game/modes';
-import { gameMode, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
+import { answersByChoice, choiceTexts, FAST_UNDO_MS, isFast, isStreak, MODES } from '../game/modes';
+import { gameMode, type GameDoc, type MoveDoc, type PrivateState, type StreakAction, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
 import { albumArt, loadFilms, loadSongs, resolveUri } from '../spotify/catalog';
 import { posterUrl } from '../tmdb/match';
@@ -131,19 +135,27 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
   }, []);
 
   /** Kör en spelhandling. activateFromGesture måste ske direkt i tryckningen (iOS). */
+  // busy hinner inte sättas mellan två tryck i samma ögonblick. Den här spärren gör det.
+  const inFlight = useRef(false);
   const act = (fn: () => Promise<void>) => {
     activateFromGesture();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     fn()
       .catch((err) => setError(errorMessage(err)))
-      .finally(() => setBusy(false));
+      .finally(() => {
+        inFlight.current = false;
+        setBusy(false);
+      });
   };
 
-  const advance = () =>
+  /** Nästa lag, eller med sameTeam samma lag igen (Fortsätt eller lås). */
+  const advance = (sameTeam = false) =>
     act(async () => {
       if (!state) throw new Error('Kortleken saknas');
-      const card = await nextTurn(code, game, teams, state, songs);
+      const card = await nextTurn(code, game, teams, state, songs, { sameTeam });
       if (card) await playCard(card, game.turnIndex + 1);
     });
 
@@ -217,7 +229,8 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
             await reveal(code, game, team, move, state.currentCard, cardArt);
           })
         }
-        onNext={advance}
+        onNext={() => advance()}
+        onDecide={(action) => advance(action === 'continue')}
         onEnd={() => {
           if (window.confirm('Avsluta spelet nu? Laget med flest kort vinner.')) {
             act(() => finishGame(code, teams, 'host'));
@@ -268,6 +281,7 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
   const tooFewSongs = !hasEnoughSongs(playable.length, teams.length);
   const [modeError, setModeError] = useState<string | null>(null);
   const [fastError, setFastError] = useState<string | null>(null);
+  const [streakError, setStreakError] = useState<string | null>(null);
 
   return (
     <>
@@ -327,6 +341,28 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
         </div>
       </div>
 
+      <section className="setting" aria-labelledby="streak-heading">
+        <h2 id="streak-heading">Fortsätt eller lås</h2>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={isStreak(game)}
+          aria-describedby="streak-help"
+          onClick={() => {
+            setStreakError(null);
+            setStreakMode(code, !isStreak(game)).catch((err) => setStreakError(`Kunde inte ändra: ${errorMessage(err)}`));
+          }}
+        >
+          {isStreak(game) ? 'Fortsätt eller lås: på' : 'Fortsätt eller lås: av'}
+        </button>
+        <p id="streak-help" className="muted small">
+          {isStreak(game)
+            ? 'Efter ett rätt svar väljer laget: lås in kortet och lämna över, eller fortsätt med en ny låt. Svarar laget fel tappar det alla kort sedan senaste inlåsningen.'
+            : 'Turen går till nästa lag efter varje låt.'}
+        </p>
+        <ErrorText error={streakError} />
+      </section>
+
       <section className="setting" aria-labelledby="fast-heading">
         <h2 id="fast-heading">Snabbläge</h2>
         <button
@@ -370,10 +406,12 @@ type TurnProps = {
   onPlay: () => void;
   onReveal: (team: Team, move: MoveDoc) => void;
   onNext: () => void;
+  /** Fortsätt eller lås: lagets val, från dess telefon eller från spelledarens reservknappar. */
+  onDecide: (action: StreakAction) => void;
   onEnd: () => void;
 };
 
-function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onNext, onEnd }: TurnProps) {
+function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onNext, onDecide, onEnd }: TurnProps) {
   const now = useNow();
   const player = usePlayer();
   const move = useDoc<MoveDoc>(moveRef(code, game.turnIndex));
@@ -388,8 +426,11 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
   const card = state?.currentCard;
 
   useAutoReveal({ code, game, move: move.data, team, busy, onReveal });
+  useStreakDecision({ code, game, team, busy, onDecide });
   const fast = isFast(game);
   const result = game.phase === 'revealed' ? game.lastResult : null;
+  // Laget i tur väljer på sin telefon: fortsätta med en ny låt eller låsa in sina osäkrade kort.
+  const deciding = Boolean(team && result && isStreak(game) && canContinue(result, game.cardsLeft));
   const selectedSlot = move.data?.slotIndex ?? (game.phase === 'placing' ? (team?.pendingSlot ?? null) : null);
   const byArtist = Boolean(team && answersByChoice(game, team));
   const texts = choiceTexts(game);
@@ -453,6 +494,7 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
           <strong>{result.correct ? 'Rätt!' : 'Fel!'}</strong>{' '}
           {result.card.film ? `${result.card.film}: ` : ''}{result.card.title} – {result.card.artist} ({result.card.year})
           {byArtist && <p>Laget valde {pickedName ?? `ingen ${texts.noun}`}.</p>}
+          <HostStreakNote game={game} team={team} deciding={deciding} />
           {result.reachedTarget && <p><strong>{team?.name} har {game.settings.targetLength} kort och vinner!</strong></p>}
         </div>
       )}
@@ -471,11 +513,14 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
           color={team.color}
           selectedSlot={selectedSlot}
           highlightCardId={result?.correct ? result.card.cardId : null}
+          riskIds={atRisk(game.streak, team.uid)}
         />
       )}
 
       <div className="sticky-actions">
-        {game.phase === 'placing' ? (
+        {deciding ? (
+          <HostStreakFallback key={game.turnIndex} game={game} team={team} busy={busy} onDecide={onDecide} />
+        ) : game.phase === 'placing' ? (
           <button
             type="button"
             className="primary big"
@@ -497,7 +542,7 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
           <li key={t.uid} className={t.uid === game.currentTeamUid ? 'current' : undefined}>
             <TeamName team={t} now={now} />
             <LevelBadge game={game} team={t} />
-            <span className="score">{t.timeline?.length ?? 0} / {game.settings.targetLength}</span>
+            <StreakScore game={game} team={t} />
           </li>
         ))}
       </ul>

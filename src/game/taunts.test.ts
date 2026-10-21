@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MASCOTS } from './mascots';
-import { REACTION_IDS, REACTIONS, reactionKind, SIGNATURE, TAUNT_IDS, TAUNTS, tauntMood, tauntText } from './taunts';
+import { DECISION_IDS, DECISION_TAUNTS, REACTION_IDS, REACTIONS, reactionKind, SIGNATURE, TAUNT_IDS, TAUNTS, tauntMood, tauntText } from './taunts';
 
 describe('pikarna', () => {
   it('har unika id:n, och varje maskot har en egen replik', () => {
@@ -34,6 +34,13 @@ describe('pikarna', () => {
     expect(TAUNT_IDS.filter((id) => REACTION_IDS.includes(id))).toEqual([]);
     expect(new Set(REACTION_IDS).size).toBe(REACTION_IDS.length);
     expect(tauntText('grattis', { mascot: 'kalle' })).toBe('Grattis! 🎉');
+  });
+
+  it('har egna id:n för pikarna medan ett lag väljer att fortsätta eller låsa in', () => {
+    const all = [...TAUNT_IDS, ...REACTION_IDS, ...DECISION_IDS];
+    expect(new Set(all).size).toBe(all.length);
+    expect(tauntText(DECISION_TAUNTS[0].id, { mascot: 'kalle' })).toBe(DECISION_TAUNTS[0].text);
+    expect(tauntMood(DECISION_TAUNTS[0].id)).toBe('cheeky');
   });
 
   it('ger ingen text för okända pikar eller lag utan maskot', () => {

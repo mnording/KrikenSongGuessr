@@ -16,7 +16,7 @@ vi.mock('../src/firebase', () => ({
 }));
 
 const { createGame, nextTurn, reveal, setMode, startGame, playAgain } = await import('../src/game/hostActions');
-const { guessArtist, joinGame, lockChoice, lockMove } = await import('../src/game/teamActions');
+const { chooseStreak, guessArtist, joinGame, lockChoice, lockMove } = await import('../src/game/teamActions');
 const { gameRef, moveRef, privateRef, teamsRef } = await import('../src/game/refs');
 
 // Testerna når inte Spotify, så korten får inga omslag.
@@ -250,5 +250,79 @@ describe('ett helt spel', () => {
     const won = teams.find((t) => t.uid === 'a')!.timeline!;
     expect(won.every((c) => c.film)).toBe(true);
     expect(won.map((c) => c.year)).toEqual([...won.map((c) => c.year)].sort((x, y) => x - y));
+  });
+});
+
+describe('fortsätt eller lås', () => {
+  /** Laget i tur lägger rätt eller fel, och spelledaren avslöjar. */
+  async function play(code: string, correct: boolean) {
+    const snap = await hostSnapshot(code);
+    const team = snap.teams.find((t) => t.uid === snap.game.currentTeamUid)!;
+    const card = snap.state.currentCard!;
+    const timeline = team.timeline ?? [];
+    const slots = Array.from({ length: timeline.length + 1 }, (_, i) => i);
+    const slot = slots.find((s) => isPlacementCorrect(timeline, s, card.year) === correct)!;
+    expect(slot, 'det finns en lucka som ger rätt svar').toBeDefined();
+    as(team.uid);
+    await lockMove(code, team.uid, snap.game.turnIndex, slot);
+    as('host');
+    const move = (await getDoc(moveRef(code, snap.game.turnIndex))).data() as MoveDoc;
+    await reveal(code, snap.game, team, move, card, noArt);
+    return { team, after: await hostSnapshot(code) };
+  }
+
+  it('bygger en svit, tappar den vid fel och behåller det inlåsta', async () => {
+    as('host');
+    const code = await createGame('host');
+    for (const [uid, name] of [['lagA', 'Lag A'], ['lagB', 'Lag B']]) {
+      as(uid);
+      await joinGame(code, uid, name, 'kalle');
+    }
+    const lobby = await hostSnapshot(code);
+    expect(lobby.game.settings.streak).toBe(true);
+    // Sviten blir högst tre kort, under mållängden 7, så ingen vinner av misstag.
+    await startGame(code, lobby.game, lobby.teams, songs, noArt);
+    const first = (await hostSnapshot(code)).game.currentTeamUid!;
+
+    // Två rätt i rad, med Fortsätt emellan.
+    for (let i = 1; i <= 2; i++) {
+      const { after } = await play(code, true);
+      expect(after.game.streak).toMatchObject({ teamUid: first });
+      expect(after.game.streak!.cardIds).toHaveLength(i);
+      as(first);
+      await chooseStreak(code, first, after.game.turnIndex, 'continue');
+      // Valet går inte att ändra.
+      await expect(chooseStreak(code, first, after.game.turnIndex, 'lock')).rejects.toMatchObject({ code: 'permission-denied' });
+      const chosen = await hostSnapshot(code);
+      expect(chosen.teams.find((t) => t.uid === first)!.streakChoice).toMatchObject({ turnIndex: after.game.turnIndex, action: 'continue' });
+      await nextTurn(code, chosen.game, chosen.teams, chosen.state, songs, { sameTeam: true });
+      const next = await hostSnapshot(code);
+      expect(next.game.currentTeamUid).toBe(first);
+      expect(next.game.phase).toBe('placing');
+    }
+
+    // Fel på tredje: båda osäkrade korten försvinner, startkortet blir kvar.
+    const { after: missed } = await play(code, false);
+    expect(missed.game.lastResult?.lost).toHaveLength(2);
+    expect(missed.game.streak).toBeNull();
+    expect(missed.teams.find((t) => t.uid === first)!.timeline).toHaveLength(1);
+    // Efter fel går det inte att välja, och spelledaren kan inte fortsätta.
+    as(first);
+    await expect(chooseStreak(code, first, missed.game.turnIndex, 'continue')).rejects.toMatchObject({ code: 'permission-denied' });
+    as('host');
+    await expect(nextTurn(code, missed.game, missed.teams, missed.state, songs, { sameTeam: true })).rejects.toThrow();
+    await nextTurn(code, missed.game, missed.teams, missed.state, songs);
+
+    // Nästa lag tar ett rätt och låser in.
+    const { team: second, after: right } = await play(code, true);
+    expect(second.uid).not.toBe(first);
+    as(second.uid);
+    await chooseStreak(code, second.uid, right.game.turnIndex, 'lock');
+    const locked = await hostSnapshot(code);
+    await nextTurn(code, locked.game, locked.teams, locked.state, songs);
+    const done = await hostSnapshot(code);
+    expect(done.game.streak).toBeNull();
+    expect(done.game.currentTeamUid).toBe(first);
+    expect(done.teams.find((t) => t.uid === second.uid)!.timeline).toHaveLength(2);
   });
 });

@@ -12,6 +12,10 @@ type Props = {
   pendingText?: string;
   /** Kortet som just lades in lyser. */
   highlightCardId?: string | null;
+  /** Fortsätt eller lås: kort i lagets svit som inte är inlåsta än. */
+  riskIds?: readonly string[];
+  /** Fortsätt eller lås: kort som just låstes in och stämplas. */
+  stampedIds?: readonly string[];
 };
 
 /** Lagens tidslinje som en remsa biljettstubbar. Luckorna är perforeringarna mellan dem. */
@@ -22,6 +26,8 @@ export function TicketTimeline({
   onSelect,
   pendingText = 'De funderar här…',
   highlightCardId,
+  riskIds = [],
+  stampedIds = [],
 }: Props) {
   const slot = (index: number) => {
     const selected = selectedSlot === index;
@@ -55,11 +61,12 @@ export function TicketTimeline({
       {cards.map((card, i) => (
         <Fragment key={card.cardId}>
           <li className="tickets-slot">{slot(i)}</li>
-          <li className={`stub${card.cardId === highlightCardId ? ' won' : ''}`}>
+          <li className={`stub${card.cardId === highlightCardId ? ' won' : ''}${riskIds.includes(card.cardId) ? ' at-risk' : ''}${stampedIds.includes(card.cardId) ? ' stamped' : ''}`}>
             <span className="stub-year">{card.year}</span>
             <span className="stub-text">
               <span className="stub-title">{cardLines(card).main}</span>
               <span className="stub-artist">{cardLines(card).sub}</span>
+              {riskIds.includes(card.cardId) && <span className="stub-risk">Ej inlåst</span>}
             </span>
             {card.imageUrl && <img className={`stub-art${card.film ? ' poster' : ''}`} src={card.imageUrl} alt="" loading="lazy" />}
           </li>

@@ -2,7 +2,7 @@
 import { deleteDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { getMascot, type MascotId } from './mascots';
 import { moveRef, teamRef } from './refs';
-import type { TeamLevel } from './types';
+import type { StreakAction, TeamLevel } from './types';
 
 // Laget väljer maskot, färgen följer med den.
 const profile = (name: string, mascot: MascotId) => ({
@@ -76,4 +76,22 @@ export async function guessArtist(code: string, uid: string, turnIndex: number, 
 /** En färdig pik till laget som gissar. Reglerna stoppar den om laget pikat de senaste åtta sekunderna. */
 export async function sendTaunt(code: string, uid: string, turnIndex: number, id: string) {
   await updateDoc(teamRef(code, uid), { taunt: { id, at: serverTimestamp(), turnIndex } });
+}
+
+/**
+ * Fortsätt eller lås: lagets val efter ett rätt svar. Spelledarens telefon ser valet och drar nästa kort
+ * eller går vidare, när ångerfönstret har gått ut. at är serverns tid, så att fönstret inte går att flytta.
+ */
+export async function chooseStreak(code: string, uid: string, turnIndex: number, action: StreakAction, afterUndo = false) {
+  await updateDoc(teamRef(code, uid), {
+    streakChoice: { turnIndex, action, at: serverTimestamp(), ...(afterUndo ? { undone: true } : {}) },
+  });
+}
+
+/**
+ * Fortsätt eller lås: laget ångrar sitt val. Reglerna tillåter det bara inom ångerfönstret och en gång
+ * per tur, så att ett lag inte kan hålla spelet stilla genom att välja och ångra om och om igen.
+ */
+export async function undoStreak(code: string, uid: string, turnIndex: number) {
+  await updateDoc(teamRef(code, uid), { streakChoice: { turnIndex, action: 'undone', at: serverTimestamp() } });
 }

@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { Song, TimelineCard } from '../engine/game';
 import type { SongFilter } from '../engine/library';
+import type { Streak } from '../engine/streak';
 
 export type GameStatus = 'lobby' | 'playing' | 'finished';
 export type GamePhase = 'placing' | 'revealed';
@@ -26,6 +27,8 @@ export type LastResult = {
   choice?: number | null;
   /** Familj: vilket alternativ som var rätt. */
   answer?: number | null;
+  /** Fortsätt eller lås: de osäkrade korten som laget tappade med det här felet. */
+  lost?: TimelineCard[];
 };
 
 export type GameDoc = {
@@ -35,7 +38,8 @@ export type GameDoc = {
   /** mode saknas i spel från före spellägena, och betyder då tidslinje. */
   /** songFilter saknas betyder alla låtar. */
   /** fastMode: laget har några sekunder att ångra sig, sedan avslöjar spelledarens telefon själv. */
-  settings: { targetLength: number; mode?: GameMode; songFilter?: SongFilter; fastMode?: boolean };
+  /** streak: efter rätt svar får laget fortsätta eller låsa in. Saknas den går turen vidare efter varje kort. */
+  settings: { targetLength: number; mode?: GameMode; songFilter?: SongFilter; fastMode?: boolean; streak?: boolean };
   turnOrder: string[];
   /** Turens nummer. Ökar hela tiden, även mellan omgångar, så att gamla drag aldrig matchar. */
   turnIndex: number;
@@ -46,6 +50,8 @@ export type GameDoc = {
   cardsLeft: number;
   /** Familj: turens fyra artister. Vilken som är rätt vet bara spelledaren tills avslöjandet. */
   choices?: string[] | null;
+  /** Fortsätt eller lås: lagets osäkrade kort, som redan ligger i dess tidslinje. */
+  streak?: Streak | null;
   createdAt?: Timestamp;
 };
 
@@ -67,7 +73,15 @@ export type TeamDoc = {
   joinedAt?: Timestamp | null;
   timeline?: TimelineCard[];
   pendingSlot?: number | null;
+  /**
+   * Fortsätt eller lås: lagets val efter ett rätt svar. Gäller bara turen med samma nummer.
+   * at sätts av servern och styr ångerfönstret (STREAK_UNDO_MS). Ett ångrat val sparas som 'undone',
+   * och valet efter det har undone: true, så att laget bara kan ångra sig en gång per tur.
+   */
+  streakChoice?: { turnIndex: number; action: StreakAction | 'undone'; at: Timestamp | null; undone?: boolean } | null;
 };
+
+export type StreakAction = 'continue' | 'lock';
 
 export type Team = TeamDoc & { uid: string };
 

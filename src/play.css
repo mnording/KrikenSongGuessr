@@ -117,7 +117,6 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  opacity: 0.92;
 }
 
 .wristband-sub .link {
@@ -299,7 +298,8 @@
 
 .stub-year {
   flex: none;
-  width: 3.1ch;
+  /* Big Shoulders har inga tabellsiffror, så fyra siffror behöver fyra tecken. */
+  width: 4ch;
   font-family: var(--display);
   font-size: 2.5rem;
   font-weight: 900;
@@ -730,4 +730,194 @@
 
 .fest-foot a {
   color: inherit;
+}
+
+
+/* ── Fortsätt eller lås ── */
+
+/*
+ * Ett osäkrat kort är en biljett som inte är stämplad än: utan hack, lite på sned och med en streckad
+ * ram i bläck. Lime är reserverat för det man trycker på, så osäkrat syns i bläck och papper.
+ */
+.stub.at-risk {
+  outline: 2px dashed var(--ink);
+  outline-offset: -6px;
+  transform: rotate(-0.8deg);
+  -webkit-mask: none;
+  mask: none;
+}
+
+.stub-risk {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 1px 6px;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Inlåst: biljetterna stämplas och får tillbaka sina hack. */
+.stub.stamped {
+  animation: stamp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes stamp {
+  from {
+    transform: scale(1.05) rotate(-1deg);
+  }
+}
+
+/* De tappade korten, rivna och bleka, kvar tills nästa tur. */
+.ghosts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stub.ghost {
+  min-height: 56px;
+  background: transparent;
+  border: 2px dashed var(--perf);
+  color: var(--fest-muted);
+  -webkit-mask: none;
+  mask: none;
+  animation: tear-away 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stub.ghost .stub-year {
+  font-size: 1.8rem;
+  text-decoration: line-through;
+  text-decoration-thickness: 3px;
+  text-decoration-color: var(--miss);
+}
+
+.stub.ghost .stub-text {
+  border-left-color: var(--perf);
+}
+
+.stub.ghost .stub-artist {
+  color: var(--fest-muted);
+}
+
+@keyframes tear-away {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) rotate(-2deg);
+  }
+}
+
+/* Räknaren på armbandet: inlåsta kort och osäkrade på samma rad, "4+2". */
+.band-count:has(.band-risk) {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 8px;
+}
+
+.band-risk {
+  color: var(--ink-soft);
+  font-size: 0.8em;
+}
+
+/* Två lika stora val med "eller" emellan, så att ett reflextryck i mitten inte träffar något. */
+.fest .streak-dock {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.fest .streak-dock .error {
+  grid-column: 1 / -1;
+}
+
+.fest .streak-dock :is(.bank, .lock) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 72px;
+  padding: 6px 8px;
+}
+
+.fest .bank {
+  border: none;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.choice-word {
+  font-size: 1.9rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.choice-note {
+  font-family: Archivo, system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.choice-or {
+  align-self: center;
+  color: var(--fest-muted);
+  font-size: 0.85rem;
+}
+
+.fest .streak-dock :is(.bank, .lock):disabled {
+  opacity: 0.5;
+  border: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stub.stamped,
+  .stub.ghost {
+    animation: none;
+  }
+
+  .stub.at-risk {
+    transform: none;
+  }
+}
+
+/* En fråga eller ett lagnamn i armbandet: mindre än ett ord som "Rätt!", och utan avstavning. */
+.wristband-big.long,
+.wristband.mine .wristband-big.long {
+  font-size: clamp(2.4rem, 11vw, 3rem);
+  line-height: 0.9;
+  hyphens: manual;
+  overflow-wrap: normal;
+}
+
+/* Knapparna väntar en stund innan de tar emot tryck, och syns då lite nedtonade. */
+.fest .streak-dock.arming :is(.bank, .lock) {
+  opacity: 0.7;
+}
+
+.fest .streak-dock .choice-note {
+  font-size: 0.95rem;
+}
+
+.choice-last {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--fest-muted);
+  font-size: 0.9rem;
+  text-align: center;
 }
