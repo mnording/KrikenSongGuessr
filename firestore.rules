@@ -72,6 +72,7 @@ service cloud.firestore {
         allow read: if isHost(code) || isMember(code);
 
         // Ett drag per tur: dokument-id är turens nummer, och drag kan inte ändras.
+        // createdAt är serverns tid, så att snabblägets ångerfönster inte går att flytta.
         allow create: if signedIn()
           && request.resource.data.keys().hasOnly(['teamUid', 'turnIndex', 'slotIndex', 'choice', 'createdAt'])
           && request.resource.data.teamUid == request.auth.uid
@@ -80,10 +81,18 @@ service cloud.firestore {
           && game(code).currentTeamUid == request.auth.uid
           && request.resource.data.turnIndex == game(code).turnIndex
           && moveId == string(game(code).turnIndex)
-          && validMove(request.resource.data);
+          && validMove(request.resource.data)
+          && request.resource.data.createdAt == request.time;
 
         allow update: if false;
-        allow delete: if isHost(code);
+
+        // Snabbläget: laget får ångra sitt drag i fem sekunder. Sedan är det låst och avslöjas.
+        allow delete: if isHost(code)
+          || (signedIn()
+            && resource.data.teamUid == request.auth.uid
+            && game(code).phase == 'placing'
+            && game(code).settings.get('fastMode', false) == true
+            && request.time < resource.data.createdAt + duration.value(5, 's'));
       }
 
       // Kortlek och aktuellt kort. Lagen får aldrig läsa här.

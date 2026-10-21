@@ -25,16 +25,20 @@ type Props = {
   /** Låtarna som urvalet ger just nu. */
   playable: Song[];
   teamCount: number;
+  /** Filmlistan har inga etiketter. */
+  showTags?: boolean;
 };
 
-export function SongPicker({ code, game, songs, playable, teamCount }: Props) {
+export function SongPicker({ code, game, songs, playable, teamCount, showTags = true }: Props) {
   const [error, setError] = useState<string | null>(null);
   // Valet visas direkt och sparas sedan. Spelledaren är ensam om att skriva, så två snabba tryck
   // ska inte vänta på varandras svar från Firestore.
   const [filter, setFilter] = useState<SongFilter>(game.settings.songFilter ?? { decades: [], tags: [] });
   const needed = songsNeeded(teamCount, game.settings.targetLength);
 
-  const save = (next: SongFilter) => {
+  const save = (choice: SongFilter) => {
+    // Utan etiketter (Film) sparas inga gamla etiketter tillbaka.
+    const next = showTags ? choice : { ...choice, tags: [] };
     setFilter(next);
     setError(null);
     setSongFilter(code, next).catch((err) => setError(`Kunde inte spara urvalet: ${errorMessage(err)}`));
@@ -43,7 +47,7 @@ export function SongPicker({ code, game, songs, playable, teamCount }: Props) {
 
   return (
     <section className="setting songs-picker" aria-labelledby="songs-heading">
-      <h2 id="songs-heading">Låtar</h2>
+      <h2 id="songs-heading">{showTags ? 'Låtar' : 'Filmlåtar'}</h2>
       <p className="muted small">Inget valt betyder alla. Väljer du flera räcker det att låten passar en av dem.</p>
       <div className="chips" role="group" aria-label="Decennier">
         {decadesIn(songs).map((d) => (
@@ -58,6 +62,7 @@ export function SongPicker({ code, game, songs, playable, teamCount }: Props) {
           </button>
         ))}
       </div>
+      {showTags && (
       <div className="chips" role="group" aria-label="Etiketter">
         {SONG_TAGS.map((t) => (
           <button
@@ -71,6 +76,7 @@ export function SongPicker({ code, game, songs, playable, teamCount }: Props) {
           </button>
         ))}
       </div>
+      )}
       <div aria-live="polite">
         <p className="songs-count">
           {playable.length === songs.length ? `Alla ${songs.length} låtar` : `${playable.length} av ${songs.length} låtar`}

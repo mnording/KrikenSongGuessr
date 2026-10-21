@@ -6,9 +6,10 @@ import { SongPicker } from '../components/SongPicker';
 import { ErrorText, LevelBadge, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
 import { TauntToasts } from '../components/Taunts';
 import { Timeline } from '../components/Timeline';
-import { MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
+import { cardLines, MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
 import { filterSongs, hasEnoughSongs } from '../engine/library';
 import { useCollection, useDoc } from '../hooks/firestore';
+import { useAutoReveal } from '../hooks/autoReveal';
 import { useNow, usePlayer, useSpotifyLoggedIn, useUser, useWakeLock } from '../hooks/misc';
 import {
   finishGame,
@@ -18,15 +19,20 @@ import {
   removeTeam,
   reveal,
   saveDeviceId,
+  setFastMode,
   setMode,
   setTargetLength,
   startGame,
 } from '../game/hostActions';
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
-import { MODES } from '../game/modes';
-import { gameMode, teamLevel, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
+import { answersByChoice, choiceTexts, FAST_UNDO_MS, isFast, MODES } from '../game/modes';
+import { gameMode, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
-import { albumArt, loadSongs, resolveUri } from '../spotify/catalog';
+import { albumArt, loadFilms, loadSongs, resolveUri } from '../spotify/catalog';
+import { posterUrl } from '../tmdb/match';
+
+/** Kortets bild: filmens affisch i Film-läget när den finns, annars albumbilden från Spotify. */
+const cardArt = (song: Song) => (song.poster ? Promise.resolve(posterUrl(song.poster)) : albumArt(song));
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -39,6 +45,7 @@ export default function HostGame() {
   const teams = useCollection<TeamDoc>(isHost ? teamsRef(code) : null);
   const state = useDoc<PrivateState>(isHost ? privateRef(code) : null);
   const [songs, setSongs] = useState<Song[] | null>(null);
+  const [films, setFilms] = useState<Song[] | null>(null);
   useWakeLock(isHost);
 
   useEffect(() => {
@@ -48,6 +55,11 @@ export default function HostGame() {
   useEffect(() => {
     void loadSongs().then(setSongs);
   }, []);
+
+  const filmMode = game.data ? gameMode(game.data) === 'film' : false;
+  useEffect(() => {
+    if (filmMode) void loadFilms().then(setFilms);
+  }, [filmMode]);
 
   if (authError) return <Screen><ErrorText error={authError} /></Screen>;
   if (!user || game.loading) return <Loading />;
@@ -76,10 +88,12 @@ export default function HostGame() {
       </Screen>
     );
   }
-  if (teams.loading || state.loading || !songs) return <Loading />;
+  if (teams.loading || state.loading || !songs || (filmMode && !films)) return <Loading />;
 
   const sortedTeams = [...teams.data].sort((a, b) => (a.joinedAt?.toMillis() ?? 0) - (b.joinedAt?.toMillis() ?? 0));
-  return <HostView code={code} game={game.data} teams={sortedTeams} state={state.data} songs={songs} />;
+  // Film-läget har en egen lista. Den byts i lobbyn när spelledaren byter läge.
+  const list = filmMode && films ? films : songs;
+  return <HostView code={code} game={game.data} teams={sortedTeams} state={state.data} songs={list} />;
 }
 
 type ViewProps = { code: string; game: GameDoc; teams: Team[]; state: PrivateState | null; songs: Song[] };
@@ -156,7 +170,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
           playerReady={player.status === 'ready'}
           onStart={() =>
             act(async () => {
-              const card = await startGame(code, game, teams, songs, albumArt, playable);
+              const card = await startGame(code, game, teams, songs, cardArt, playable);
               await playCard(card, game.turnIndex + 1);
             })
           }
@@ -200,7 +214,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
         onReveal={(team, move) =>
           act(async () => {
             if (!state?.currentCard) throw new Error('Inget aktuellt kort');
-            await reveal(code, game, team, move, state.currentCard, albumArt);
+            await reveal(code, game, team, move, state.currentCard, cardArt);
           })
         }
         onNext={advance}
@@ -253,6 +267,7 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
   const tooMany = teams.length > MAX_TEAMS;
   const tooFewSongs = !hasEnoughSongs(playable.length, teams.length);
   const [modeError, setModeError] = useState<string | null>(null);
+  const [fastError, setFastError] = useState<string | null>(null);
 
   return (
     <>
@@ -312,7 +327,28 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
         </div>
       </div>
 
-      <SongPicker code={code} game={game} songs={songs} playable={playable} teamCount={teams.length} />
+      <section className="setting" aria-labelledby="fast-heading">
+        <h2 id="fast-heading">Snabbläge</h2>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={isFast(game)}
+          aria-describedby="fast-help"
+          onClick={() => {
+            setFastError(null);
+            setFastMode(code, !isFast(game)).catch((err) => setFastError(`Kunde inte ändra snabbläget: ${errorMessage(err)}`));
+          }}
+        >
+          {isFast(game) ? 'Snabbläge: på' : 'Snabbläge: av'}
+        </button>
+        <p id="fast-help" className="muted small">
+          När ett lag låser har det {FAST_UNDO_MS / 1000} sekunder att ångra sig. Sedan visas svaret direkt, utan att du
+          behöver trycka. Nästa låt startar du fortfarande själv.
+        </p>
+        <ErrorText error={fastError} />
+      </section>
+
+      <SongPicker code={code} game={game} songs={songs} playable={playable} teamCount={teams.length} showTags={gameMode(game) !== 'film'} />
 
       <button type="button" className="primary big" disabled={busy || tooFew || tooMany || tooFewSongs || !playerReady} onClick={onStart}>
         Starta spelet
@@ -350,9 +386,13 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
 
   const team = teams.find((t) => t.uid === game.currentTeamUid);
   const card = state?.currentCard;
+
+  useAutoReveal({ code, game, move: move.data, team, busy, onReveal });
+  const fast = isFast(game);
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const selectedSlot = move.data?.slotIndex ?? (game.phase === 'placing' ? (team?.pendingSlot ?? null) : null);
-  const byArtist = Boolean(team && gameMode(game) === 'family' && teamLevel(team) === 'easy');
+  const byArtist = Boolean(team && answersByChoice(game, team));
+  const texts = choiceTexts(game);
   const choices = game.choices ?? [];
   const picked = move.data?.choice ?? result?.choice ?? null;
   const pickedName = picked !== null ? choices[picked] : undefined;
@@ -398,8 +438,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
             <>
               <span className="card-year">{card.year}</span>
               <span>
-                <span className="card-title">{card.title}</span>
-                <span className="card-artist">{card.artist}</span>
+                <span className="card-title">{cardLines(card).main}</span>
+                <span className="card-artist">{cardLines(card).sub}</span>
               </span>
             </>
           ) : (
@@ -411,8 +451,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
       {result && (
         <div className={`result ${result.correct ? 'correct' : 'wrong'}`} role="status">
           <strong>{result.correct ? 'Rätt!' : 'Fel!'}</strong>{' '}
-          {result.card.title} – {result.card.artist} ({result.card.year})
-          {byArtist && <p>Laget valde {pickedName ?? 'ingen artist'}.</p>}
+          {result.card.film ? `${result.card.film}: ` : ''}{result.card.title} – {result.card.artist} ({result.card.year})
+          {byArtist && <p>Laget valde {pickedName ?? `ingen ${texts.noun}`}.</p>}
           {result.reachedTarget && <p><strong>{team?.name} har {game.settings.targetLength} kort och vinner!</strong></p>}
         </div>
       )}
@@ -420,8 +460,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
       {game.phase === 'placing' && (
         <p className="move-status">
           {move.data
-            ? `${team?.name ?? 'Laget'} har låst ${pickedName ?? 'sitt svar'}.`
-            : `Väntar på att ${team?.name ?? 'laget'} ${byArtist ? 'väljer artist' : 'placerar'}…`}
+            ? `${team?.name ?? 'Laget'} har låst ${pickedName ?? 'sitt svar'}.${fast ? ' Svaret visas automatiskt om några sekunder.' : ''}`
+            : `Väntar på att ${team?.name ?? 'laget'} ${byArtist ? `väljer ${texts.noun}` : 'placerar'}…`}
         </p>
       )}
 

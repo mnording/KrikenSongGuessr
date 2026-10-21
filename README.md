@@ -14,7 +14,7 @@ npm run test:rules   # säkerhetsreglerna och ett helt spel mot Firestore-emulat
 npm run deploy       # bygger och deployar hosting och regler
 ```
 
-`.env.local` behöver `VITE_SPOTIFY_CLIENT_ID`.
+`.env.local` behöver `VITE_SPOTIFY_CLIENT_ID`. För filmlistans premiärår och affischer behövs också `VITE_TMDB_API_KEY` (gratis på themoviedb.org, under Inställningar → API). Den används bara i `npm run dev` och följer aldrig med i bygget.
 
 Spotify-appen behöver Redirect URI:er som matchar exakt, till exempel:
 
@@ -57,6 +57,9 @@ Spelledaren väljer läge i lobbyn (`settings.mode` på spelet, saknas det gäll
 
 - **Tidslinje:** som från början.
 - **Familj:** varje lag väljer nivå när det går med (`level` på laget, går bara att byta i lobbyn). Ett lätt lag väljer artist bland fyra (`choices` på spelet, `choice` i draget) och får kortet i årsordning om det är rätt. Ett svårt lag lägger i tidslinjen. Övriga lag gissar med (`guess` på laget, bara medan turen pågår), vilket inte ger några kort. Nivån sparas även i tidslinjeläget men används inte där, så att spelledaren kan byta läge i lobbyn utan att lagen behöver gå med igen. Lag som gick med före bytet är svåra tills de väljer nivå i lobbyn. Alternativen väljs i `src/engine/artist.ts`.
+- **Film:** en egen lista, `src/data/films.json`, med låt, artist, film och filmens premiärår (`year`). Alla lag gissar filmen bland fyra (`choices` på spelet), och rätt svar läggs i tidslinjen efter premiäråret. Decennierna i urvalet gäller, etiketterna inte. Listan kontrolleras och kopplas till Spotify i `/host/songs?lista=film`. Där hämtar **Hämta från TMDB** varje films premiärår, svenska titel och affisch från TMDB (The Movie Database) och flaggar skillnader. När du laddar ner `films.json` sparas TMDB:s år, `tmdbId` och `poster` (sökväg till affischen). Titlarna rättas för hand, eftersom TMDB ibland saknar svensk översättning. I spelet visar Film-korten affischen, och albumbilden från Spotify används bara när affisch saknas. Spelet anropar aldrig TMDB, det visar bara bilderna från TMDB:s bildserver.
+
+**Snabbläge** (`settings.fastMode`, i alla lägen): när ett lag låser har det fem sekunder att ångra (dragets `createdAt` är serverns tid, och reglerna tillåter att laget tar bort sitt drag bara inom fönstret). Spelledarens telefon avslöjar sedan själv (`src/hooks/autoReveal.ts`), räknat från när den ser draget plus lite marginal, så att olika klockor inte spelar roll. Ett lag som ångrar om och om igen kan inte skjuta upp avslöjandet mer än tolv sekunder från turens första drag. Draget måste ha serverns tid (`createdAt`). Knappen Avslöja finns kvar om telefonen tappar anslutningen.
 
 ## Pikar
 

@@ -326,6 +326,14 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 - **Open (ours):** choosing a slot tears the strip open into an unnotched stub with a 3px dashed lime edge, lime wash, a lime "?" and "Här – mellan X och Y"; it grows in (0.35s scale and fade).
 - **Open (theirs):** the same stub, transparent with a Theirs Outline dashed edge and muted text, reading "De funderar här…" or "Låst här".
 
+### Undo (fast mode)
+- After a team locks in fast mode, the dock shows "↩ Ångra (5)" counting down: Night Raised fill, 2px Acid Lime edge, display face at 1.5rem. Its accessible name stays "Ångra" while the number changes. The hint above reads "Låst! Svaret visas om några sekunder.", and a locked choice carries an ink "Låst" tag. When the window closes, the dock turns into a status line ("Ångra-tiden är slut. Svaret visas strax."). Undoing returns the team to its selection with the same choice still marked, so it can change and lock again. A late tap shows "För sent att ångra" instead of an error.
+- In the host lobby, fast mode is its own "Snabbläge" section with a toggle that reads "Snabbläge: på" or "Snabbläge: av" and an explanation under it.
+
+### Film cards
+- In Film mode a stub shows the film as its title line and "song – artist" as its second line; the year is the premiere year. Its picture is the film poster from TMDB in poster proportions (44×64px instead of the 44px square album art), falling back to Spotify album art. The host's answer panel and result say the film first.
+- In Film mode the team footer carries the TMDB attribution: TMDB's "alt short" logo (`public/tmdb-logo.svg`, their own green-to-blue gradient, 12px tall, linked to themoviedb.org) above "Filmaffischer från TMDB …", as TMDB's terms require. The film list in `/host/songs` carries the same.
+
 ### Taunts
 Teams waiting for their turn tease the team that is placing, in `src/components/Taunts.tsx`.
 - **Dock:** while a team places, the waiting teams get a docked button "😏 Skicka en pik": Night Raised fill, 2px Acid Lime edge, display face at 1.4rem. It opens a Night Raised panel above it: the team's own mascot line across the full width (with its pin), then the six shared lines in two columns, each a left-aligned Ticket Paper slab of 48px, so the panel covers about half the screen. The panel closes when a taunt is sent or the turn changes. After sending, the button turns dashed and muted with a countdown ("Pika igen om 7 s", or "Reagera igen om 7 s" after the reveal), counted from the team's stored taunt so it survives a reload.

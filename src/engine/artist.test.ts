@@ -1,9 +1,23 @@
 import { describe, expect, it } from 'vitest';
+import films from '../data/films.json';
 import songs from '../data/songs.json';
-import { answerIndex, artistKeys, CHOICE_COUNT, evaluateArtistChoice, pickChoices, sameArtist, sortedSlot } from './artist';
+import {
+  answerIndex,
+  artistKeys,
+  CHOICE_COUNT,
+  evaluateArtistChoice,
+  evaluateFilmChoice,
+  filmAnswerIndex,
+  pickChoices,
+  pickFilmChoices,
+  sameArtist,
+  sameFilm,
+  sortedSlot,
+} from './artist';
 import type { Song, TimelineCard } from './game';
 
 const list = songs as Song[];
+const filmList = films as Song[];
 const card = (year: number, artist = 'X'): TimelineCard => ({ cardId: `c${year}`, title: 'T', artist, year });
 
 /** Förutsägbar slump för testerna. */
@@ -71,5 +85,26 @@ describe('utvärderingen', () => {
     expect(lost.correct).toBe(false);
     expect(lost.timeline).toEqual(timeline);
     expect(evaluateArtistChoice(timeline, ['A'], 9, card(1975, 'ABBA')).correct).toBe(false);
+  });
+});
+
+describe('filmerna', () => {
+  it('ger fyra olika filmer där låtens film finns med, för varje filmlåt', () => {
+    filmList.forEach((song, i) => {
+      const choices = pickFilmChoices(song, filmList, seeded(i + 1));
+      expect(choices, song.id).toHaveLength(CHOICE_COUNT);
+      expect(choices.filter((c) => sameFilm(c, song.film!))).toHaveLength(1);
+      expect(new Set(choices).size).toBe(CHOICE_COUNT);
+      expect(filmAnswerIndex(choices, song.film)).not.toBeNull();
+    });
+  });
+
+  it('ger kortet vid rätt film och lägger det efter premiäråret', () => {
+    const card = { cardId: 'f', title: 'Let It Go', artist: 'Idina Menzel', film: 'Frost', year: 2013 };
+    const timeline = [{ cardId: 'a', title: 'T', artist: 'A', year: 1994 }, { cardId: 'b', title: 'T', artist: 'A', year: 2016 }];
+    const won = evaluateFilmChoice(timeline, ['Lejonkungen', 'frost', 'Shrek', 'Coco'], 1, card);
+    expect(won.correct).toBe(true);
+    expect(won.timeline.map((c) => c.year)).toEqual([1994, 2013, 2016]);
+    expect(evaluateFilmChoice(timeline, ['Lejonkungen', 'Frost', 'Shrek', 'Coco'], 0, card).correct).toBe(false);
   });
 });

@@ -702,3 +702,32 @@
 .taunt-options .mascot-pin {
   width: 36px;
 }
+
+/* ── Snabbläget: ångra inom några sekunder ── */
+
+.undo-dock {
+  flex-direction: column;
+}
+
+.undo {
+  min-height: 56px;
+  border: 2px solid var(--act);
+  border-radius: 10px;
+  background: var(--night-2);
+  color: var(--fest-text);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Film-lägets affischer är stående, så de får affischens proportioner i stället för en kvadrat. */
+.stub-art.poster {
+  width: 44px;
+  height: 64px;
+}
+
+.fest-foot a {
+  color: inherit;
+}

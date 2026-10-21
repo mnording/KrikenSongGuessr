@@ -53,6 +53,11 @@ export async function lockMove(code: string, uid: string, turnIndex: number, slo
   });
 }
 
+/** Snabbläget: laget tar tillbaka sitt drag. Reglerna tillåter det bara några sekunder efter låsningen. */
+export async function undoMove(code: string, turnIndex: number) {
+  await deleteDoc(moveRef(code, turnIndex));
+}
+
 /** Familj, lätt lag: lagets val av artist är dess drag för turen. */
 export async function lockChoice(code: string, uid: string, turnIndex: number, choice: number) {
   await setDoc(moveRef(code, turnIndex), {

@@ -14,11 +14,12 @@ import {
   toTimelineCard,
   type Song,
 } from '../engine/game';
-import { answerIndex, evaluateArtistChoice, pickChoices } from '../engine/artist';
+import { answerIndex, evaluateArtistChoice, evaluateFilmChoice, filmAnswerIndex, pickChoices, pickFilmChoices } from '../engine/artist';
+import { answersByChoice } from './modes';
 import type { SongFilter } from '../engine/library';
 import { db } from '../firebase';
 import { gameRef, moveRef, movesRef, privateRef, teamRef } from './refs';
-import { gameMode, teamLevel, type GameDoc, type GameMode, type MoveDoc, type PrivateState, type Team } from './types';
+import { gameMode, type GameDoc, type GameMode, type MoveDoc, type PrivateState, type Team } from './types';
 
 const HOST_GAME_KEY = 'host.gameCode';
 
@@ -65,14 +66,26 @@ export async function setTargetLength(code: string, target: number) {
   await batch.commit();
 }
 
+/** Filmlåtarna har inga etiketter, så Film nollställer etikettvalet. */
 export async function setMode(code: string, mode: GameMode) {
   const batch = writeBatch(db);
-  batch.update(gameRef(code), { 'settings.mode': mode });
+  batch.update(gameRef(code), mode === 'film' ? { 'settings.mode': mode, 'settings.songFilter.tags': [] } : { 'settings.mode': mode });
   await batch.commit();
 }
 
 /** Familj-läget visar fyra artister för varje kort. Tidslinjeläget har inga. */
-const choicesFor = (game: GameDoc, song: Song, songs: Song[]) => (gameMode(game) === 'family' ? pickChoices(song, songs) : null);
+function choicesFor(game: GameDoc, song: Song, songs: Song[]) {
+  const mode = gameMode(game);
+  if (mode === 'family') return pickChoices(song, songs);
+  if (mode === 'film') return pickFilmChoices(song, songs);
+  return null;
+}
+
+export async function setFastMode(code: string, fastMode: boolean) {
+  const batch = writeBatch(db);
+  batch.update(gameRef(code), { 'settings.fastMode': fastMode });
+  await batch.commit();
+}
 
 /** Bara i lobbyn: vilka låtar spelet drar ur. */
 export async function setSongFilter(code: string, filter: SongFilter) {
@@ -151,17 +164,17 @@ export async function startGame(
 }
 
 /**
- * Utvärderar lagets drag. Ett lätt lag i Familj-läget har valt artist, alla andra har lagt i en lucka.
+ * Utvärderar lagets drag. Ett lätt lag i Familj har valt artist, alla i Film har valt film, och resten har lagt i en lucka.
  * I Familj-läget visas också vilket alternativ som var rätt, så att alla som gissade med ser hur det gick.
  */
 export async function reveal(code: string, game: GameDoc, team: Team, move: MoveDoc, song: Song, artFor: ArtLookup) {
   const card = toTimelineCard(song, await artFor(song));
   const timeline = team.timeline ?? [];
   const choices = game.choices ?? [];
-  const family = gameMode(game) === 'family';
-  const byArtist = family && teamLevel(team) === 'easy';
-  const evaluation = byArtist
-    ? evaluateArtistChoice(timeline, choices, move.choice ?? -1, card)
+  const mode = gameMode(game);
+  const byChoice = answersByChoice(game, team);
+  const evaluation = byChoice
+    ? (mode === 'film' ? evaluateFilmChoice : evaluateArtistChoice)(timeline, choices, move.choice ?? -1, card)
     : { ...evaluatePlacement(timeline, move.slotIndex ?? -1, card), slotIndex: move.slotIndex ?? -1 };
   const batch = writeBatch(db);
   if (evaluation.correct) {
@@ -176,8 +189,8 @@ export async function reveal(code: string, game: GameDoc, team: Team, move: Move
       correct: evaluation.correct,
       card,
       reachedTarget: hasReachedTarget(evaluation.timeline, game.settings.targetLength),
-      choice: byArtist ? (move.choice ?? null) : null,
-      answer: family ? answerIndex(choices, card.artist) : null,
+      choice: byChoice ? (move.choice ?? null) : null,
+      answer: mode === 'film' ? filmAnswerIndex(choices, card.film) : mode === 'family' ? answerIndex(choices, card.artist) : null,
     },
   });
   await batch.commit();

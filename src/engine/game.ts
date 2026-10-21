@@ -9,6 +9,11 @@ export type Song = {
   year: number;
   /** Etiketter för spelledarens urval, se library.ts. */
   tags?: SongTag[];
+  /** Film-läget: filmen låten kommer från. year är då filmens premiärår. */
+  film?: string;
+  /** Film-läget: filmen hos TMDB och sökvägen till dess affisch, hämtade med verktyget på /host/songs. */
+  tmdbId?: number;
+  poster?: string;
 };
 
 export type TimelineCard = {
@@ -18,7 +23,14 @@ export type TimelineCard = {
   year: number;
   /** Albumbild från Spotify. Saknas om spelledaren inte hittade någon. */
   imageUrl?: string;
+  /** Film-läget: filmen låten kommer från. */
+  film?: string;
 };
+
+/** Vad ett kort visar: filmen stort och låten under i Film-läget, annars titel och artist. */
+export function cardLines(card: { title: string; artist: string; film?: string }): { main: string; sub: string } {
+  return card.film ? { main: card.film, sub: `${card.title} – ${card.artist}` } : { main: card.title, sub: card.artist };
+}
 
 export const MIN_TEAMS = 2;
 export const MAX_TEAMS = 10;
@@ -30,6 +42,7 @@ export function toTimelineCard(song: Song, imageUrl?: string | null): TimelineCa
   const card: TimelineCard = { cardId: song.id, title: song.title, artist: song.artist, year: song.year };
   // Firestore tar inte emot undefined, så fältet läggs bara till när det finns.
   if (imageUrl) card.imageUrl = imageUrl;
+  if (song.film) card.film = song.film;
   return card;
 }
 

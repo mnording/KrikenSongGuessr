@@ -893,3 +893,19 @@ label {
   color: #fbbf24;
   font-weight: 600;
 }
+
+/* Filmlistan: affischen från TMDB bredvid året. */
+.song-poster {
+  flex: none;
+  width: 32px;
+  height: 48px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+/* TMDB:s logotyp i attributionen, enligt deras villkor. Samma i båda världarna. */
+.tmdb-credit img {
+  display: block;
+  height: 12px;
+  margin: 0 auto 6px;
+}
