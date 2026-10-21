@@ -1,7 +1,7 @@
 // Familj-läget på lagets skärm: de fyra artisterna, lagets val eller gissning, och hur det gick.
 import { useState } from 'react';
 import { guessArtist } from '../game/teamActions';
-import { LETTERS, showsChoices } from '../game/modes';
+import { choiceTexts, LETTERS, showsChoices } from '../game/modes';
 import type { GameDoc, Team } from '../game/types';
 import { errorMessage } from '../util';
 import { ArtistChoices } from './ArtistChoices';
@@ -26,6 +26,7 @@ export function FamilyRound({ code, game, me, myTurn, byArtist, pick, onPick }: 
   if (!showsChoices(game, myTurn, byArtist)) return null;
 
   const choices = game.choices!;
+  const texts = choiceTexts(game);
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const myGuess = me.guess?.turnIndex === game.turnIndex ? me.guess.choice : null;
   const guessing = !myTurn && game.phase === 'placing';
@@ -48,7 +49,7 @@ export function FamilyRound({ code, game, me, myTurn, byArtist, pick, onPick }: 
       )}
       <ArtistChoices
         choices={choices}
-        label={result ? 'Vem sjöng?' : byArtist ? 'Vem sjunger?' : 'Gissa med: vem sjunger?'}
+        label={result ? texts.past : byArtist ? texts.ask : texts.guess}
         selected={own}
         answer={result ? (result.answer ?? null) : null}
         onSelect={onPick ?? (guessing ? guess : undefined)}

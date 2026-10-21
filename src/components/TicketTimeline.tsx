@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import type { TimelineCard } from '../engine/game';
+import { cardLines, type TimelineCard } from '../engine/game';
 import { slotLabel } from '../util';
 
 type Props = {
@@ -58,8 +58,8 @@ export function TicketTimeline({
           <li className={`stub${card.cardId === highlightCardId ? ' won' : ''}`}>
             <span className="stub-year">{card.year}</span>
             <span className="stub-text">
-              <span className="stub-title">{card.title}</span>
-              <span className="stub-artist">{card.artist}</span>
+              <span className="stub-title">{cardLines(card).main}</span>
+              <span className="stub-artist">{cardLines(card).sub}</span>
             </span>
             {card.imageUrl && <img className="stub-art" src={card.imageUrl} alt="" loading="lazy" />}
           </li>

@@ -9,11 +9,18 @@ const IMAGE_CACHE_KEY = 'spotify.imageCache';
 const YEAR_CACHE_KEY = 'spotify.yearCache';
 
 let songsPromise: Promise<Song[]> | null = null;
+let filmsPromise: Promise<Song[]> | null = null;
 
 /** Laddas först när spelledarvyn öppnas, så att listan inte ligger i lagens kod. */
 export function loadSongs(): Promise<Song[]> {
   songsPromise ??= import('../data/songs.json').then((m) => m.default as Song[]);
   return songsPromise;
+}
+
+/** Film-lägets egen lista: låtar ur filmer, med filmens namn och premiärår. */
+export function loadFilms(): Promise<Song[]> {
+  filmsPromise ??= import('../data/films.json').then((m) => m.default as Song[]);
+  return filmsPromise;
 }
 
 function readCache(key = CACHE_KEY): Record<string, string> {

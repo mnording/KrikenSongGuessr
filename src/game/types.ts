@@ -5,8 +5,11 @@ import type { SongFilter } from '../engine/library';
 export type GameStatus = 'lobby' | 'playing' | 'finished';
 export type GamePhase = 'placing' | 'revealed';
 
-/** Tidslinje: alla lägger låten rätt. Familj: varje lag väljer nivå, och alla får gissa artist. */
-export type GameMode = 'timeline' | 'family';
+/**
+ * Tidslinje: alla lägger låten rätt. Familj: varje lag väljer nivå, och alla får gissa artist.
+ * Film: alla gissar vilken film låten kommer från, ur en egen lista med filmlåtar.
+ */
+export type GameMode = 'timeline' | 'family' | 'film';
 
 /** Lätt: välj artist bland fyra. Svår: lägg låten i tidslinjen. */
 export type TeamLevel = 'easy' | 'hard';

@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import type { TimelineCard } from '../engine/game';
+import { cardLines, type TimelineCard } from '../engine/game';
 import { slotLabel } from '../util';
 
 type Props = {
@@ -51,8 +51,8 @@ export function Timeline({ cards, color, selectable = false, selectedSlot = null
           >
             <span className="card-year">{card.year}</span>
             <span className="card-text">
-              <span className="card-title">{card.title}</span>
-              <span className="card-artist">{card.artist}</span>
+              <span className="card-title">{cardLines(card).main}</span>
+              <span className="card-artist">{cardLines(card).sub}</span>
             </span>
             {card.imageUrl && <img className="card-art" src={card.imageUrl} alt="" loading="lazy" />}
           </li>

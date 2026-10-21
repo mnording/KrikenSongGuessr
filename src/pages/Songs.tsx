@@ -1,11 +1,11 @@
 // Dev-verktyg för spelledaren: koppla låtarna till Spotify, provspela dem och exportera JSON.
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { ErrorText, Loading, Screen } from '../components/Common';
 import type { Song } from '../engine/game';
 import { usePlayer, useSpotifyLoggedIn } from '../hooks/misc';
 import { login } from '../spotify/auth';
-import { cachedUri, exportPlaylist, loadSongs, overrideUri, resolveUri, spotifyYear } from '../spotify/catalog';
+import { cachedUri, exportPlaylist, loadFilms, loadSongs, overrideUri, resolveUri, spotifyYear } from '../spotify/catalog';
 import { activateFromGesture, initPlayer, pause, playTrack } from '../spotify/player';
 import { errorMessage } from '../util';
 
@@ -34,6 +34,11 @@ function parseTrackUri(input: string): string | null {
 }
 
 export default function Songs() {
+  // ?lista=film visar Film-lägets lista i stället för den vanliga.
+  const [params] = useSearchParams();
+  const films = params.get('lista') === 'film';
+  const title = films ? 'Filmlåtarna' : 'Låtlistan';
+  const file = films ? 'films.json' : 'songs.json';
   const spotify = useSpotifyLoggedIn();
   const player = usePlayer();
   const [songs, setSongs] = useState<Song[] | null>(null);
@@ -44,11 +49,11 @@ export default function Songs() {
   const [yearCheck, setYearCheck] = useState<{ done: number; total: number; failed: number; finished: boolean } | null>(null);
 
   useEffect(() => {
-    void loadSongs().then((list) => {
+    void (films ? loadFilms() : loadSongs()).then((list) => {
       setSongs(list);
       setRows(Object.fromEntries(list.map((s) => [s.id, { uri: cachedUri(s), status: cachedUri(s) ? 'ok' : 'idle' }])));
     });
-  }, []);
+  }, [films]);
 
   useEffect(() => {
     if (spotify) void initPlayer().catch((err) => setError(errorMessage(err)));
@@ -56,8 +61,8 @@ export default function Songs() {
 
   if (!spotify) {
     return (
-      <Screen title="Låtlistan">
-        <button type="button" className="primary" onClick={() => void login('/host/songs')}>
+      <Screen title={title}>
+        <button type="button" className="primary" onClick={() => void login(films ? '/host/songs?lista=film' : '/host/songs')}>
           Logga in med Spotify
         </button>
       </Screen>
@@ -121,7 +126,7 @@ export default function Songs() {
 
   const exportSongs = () =>
     download(
-      'songs.json',
+      file,
       songs.map((s) => ({ ...s, spotifyUri: rows[s.id]?.uri ?? s.spotifyUri })),
     );
 
@@ -139,7 +144,7 @@ export default function Songs() {
   const off = songs.filter((s) => yearOff(s, rows[s.id])).length;
 
   return (
-    <Screen title="Låtlistan">
+    <Screen title={title}>
       <p className="muted">
         {songs.length} låtar, {resolved} kopplade till Spotify. Provspela varje låt en gång så att du vet att den går att
         spela. Kopplingarna sparas på den här telefonen.
@@ -151,7 +156,7 @@ export default function Songs() {
         <button type="button" disabled={running || resolved === 0} onClick={() => void checkYears()}>
           {yearCheck && !yearCheck.finished ? `Kontrollerar… ${yearCheck.done} av ${yearCheck.total}` : 'Kontrollera år'}
         </button>
-        <button type="button" onClick={exportSongs}>Ladda ner songs.json</button>
+        <button type="button" onClick={exportSongs}>Ladda ner {file}</button>
         <button type="button" onClick={() => void pause()}>Pausa</button>
       </div>
       <ErrorText error={error ?? player.error} />
@@ -174,6 +179,7 @@ export default function Songs() {
                 <span className="card-title">{song.title}</span>
                 <span className="card-artist">
                   {song.artist}
+                  {song.film ? ` · ${song.film}` : ''}
                   {song.tags?.length ? ` · ${song.tags.join(', ')}` : ''}
                 </span>
                 {yearOff(song, row) && (

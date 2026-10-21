@@ -75,6 +75,7 @@ export default function HostStart() {
       <ErrorText error={error} />
       <div className="footer-links">
         <Link to="/host/songs" className="link">Låtlistan</Link>
+        <Link to="/host/songs?lista=film" className="link">Filmlåtarna</Link>
         <button type="button" className="link" onClick={logout}>Logga ut från Spotify</button>
       </div>
     </Screen>

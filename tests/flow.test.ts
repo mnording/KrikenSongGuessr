@@ -4,7 +4,7 @@ import { deleteApp, initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectFirestoreEmulator, getDoc, getDocs, getFirestore, type Firestore } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { answerIndex } from '../src/engine/artist';
+import { answerIndex, filmAnswerIndex } from '../src/engine/artist';
 import { isPlacementCorrect, type Song } from '../src/engine/game';
 import type { GameDoc, MoveDoc, PrivateState, Team, TeamDoc } from '../src/game/types';
 
@@ -207,5 +207,46 @@ describe('ett helt spel', () => {
     const years = teams.find((t) => t.uid === 'latt')!.timeline!.map((c) => c.year);
     expect(years).toHaveLength(game.settings.targetLength);
     expect(years).toEqual([...years].sort((a, b) => a - b));
+  });
+  it('spelas i Film-läget där alla gissar filmen', async () => {
+    const films = songs.map((song, i) => ({ ...song, artist: `Artist ${i}`, film: `Film ${i % 10}` }));
+    as('host');
+    const code = await createGame('host');
+    await setMode(code, 'film');
+    as('a');
+    await joinGame(code, 'a', 'Lag A', 'kicki');
+    as('b');
+    await joinGame(code, 'b', 'Lag B', 'bosse');
+
+    let { game, teams } = await hostSnapshot(code);
+    await startGame(code, game, teams, films, noArt);
+
+    let turns = 0;
+    for (;;) {
+      const snap = await hostSnapshot(code);
+      if (snap.game.status === 'finished') break;
+      const team = snap.teams.find((t) => t.uid === snap.game.currentTeamUid)!;
+      const card = snap.state.currentCard!;
+      const answer = filmAnswerIndex(snap.game.choices!, card.film)!;
+      expect(answer).not.toBeNull();
+      // Lag A väljer alltid rätt film, lag B alltid fel.
+      const choice = team.uid === 'a' ? answer : (answer + 1) % 4;
+      as(team.uid);
+      await lockChoice(code, team.uid, snap.game.turnIndex, choice);
+      as('host');
+      const move = (await getDoc(moveRef(code, snap.game.turnIndex))).data() as MoveDoc;
+      await reveal(code, snap.game, team, move, card, noArt);
+      const after = await hostSnapshot(code);
+      expect(after.game.lastResult?.correct).toBe(team.uid === 'a');
+      await nextTurn(code, after.game, after.teams, after.state, films);
+      turns++;
+      expect(turns).toBeLessThan(100);
+    }
+
+    ({ game, teams } = await hostSnapshot(code));
+    expect(game.winnerUids).toEqual(['a']);
+    const won = teams.find((t) => t.uid === 'a')!.timeline!;
+    expect(won.every((c) => c.film)).toBe(true);
+    expect(won.map((c) => c.year)).toEqual([...won.map((c) => c.year)].sort((x, y) => x - y));
   });
 });

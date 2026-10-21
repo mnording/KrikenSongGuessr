@@ -7,7 +7,7 @@ import { SongPicker } from '../components/SongPicker';
 import { ErrorText, LevelBadge, Loading, Scoreboard, Screen, TeamName } from '../components/Common';
 import { TauntToasts } from '../components/Taunts';
 import { Timeline } from '../components/Timeline';
-import { MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
+import { cardLines, MAX_TARGET, MAX_TEAMS, MIN_TARGET, MIN_TEAMS, type Song } from '../engine/game';
 import { filterSongs, hasEnoughSongs } from '../engine/library';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePlayer, useSpotifyLoggedIn, useUser, useWakeLock } from '../hooks/misc';
@@ -25,10 +25,10 @@ import {
   startGame,
 } from '../game/hostActions';
 import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
-import { FAST_UNDO_MS, isFast, MODES } from '../game/modes';
-import { gameMode, teamLevel, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
+import { answersByChoice, choiceTexts, FAST_UNDO_MS, isFast, MODES } from '../game/modes';
+import { gameMode, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
-import { albumArt, loadSongs, resolveUri } from '../spotify/catalog';
+import { albumArt, loadFilms, loadSongs, resolveUri } from '../spotify/catalog';
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -41,6 +41,7 @@ export default function HostGame() {
   const teams = useCollection<TeamDoc>(isHost ? teamsRef(code) : null);
   const state = useDoc<PrivateState>(isHost ? privateRef(code) : null);
   const [songs, setSongs] = useState<Song[] | null>(null);
+  const [films, setFilms] = useState<Song[] | null>(null);
   useWakeLock(isHost);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function HostGame() {
 
   useEffect(() => {
     void loadSongs().then(setSongs);
+    void loadFilms().then(setFilms);
   }, []);
 
   if (authError) return <Screen><ErrorText error={authError} /></Screen>;
@@ -78,17 +80,21 @@ export default function HostGame() {
       </Screen>
     );
   }
-  if (teams.loading || state.loading || !songs) return <Loading />;
+  if (teams.loading || state.loading || !songs || !films) return <Loading />;
 
   const sortedTeams = [...teams.data].sort((a, b) => (a.joinedAt?.toMillis() ?? 0) - (b.joinedAt?.toMillis() ?? 0));
-  return <HostView code={code} game={game.data} teams={sortedTeams} state={state.data} songs={songs} />;
+  // Film-läget har en egen lista. Den byts i lobbyn när spelledaren byter läge.
+  const list = gameMode(game.data) === 'film' ? films : songs;
+  return <HostView code={code} game={game.data} teams={sortedTeams} state={state.data} songs={list} />;
 }
 
 type ViewProps = { code: string; game: GameDoc; teams: Team[]; state: PrivateState | null; songs: Song[] };
 
 function HostView({ code, game, teams, state, songs }: ViewProps) {
   // Kortleken blandas ur spelledarens urval (bara i lobbyn). Familj-lägets artister tas ur hela listan.
-  const playable = filterSongs(songs, game.settings.songFilter);
+  // Filmlåtarna har inga etiketter, så där gäller bara decennierna.
+  const filter = gameMode(game) === 'film' && game.settings.songFilter ? { ...game.settings.songFilter, tags: [] } : game.settings.songFilter;
+  const playable = filterSongs(songs, filter);
   const player = usePlayer();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -329,7 +335,7 @@ function Lobby({ code, game, teams, busy, songs, playable, playerReady, onStart 
         </p>
       </div>
 
-      <SongPicker code={code} game={game} songs={songs} playable={playable} teamCount={teams.length} />
+      <SongPicker code={code} game={game} songs={songs} playable={playable} teamCount={teams.length} showTags={gameMode(game) !== 'film'} />
 
       <button type="button" className="primary big" disabled={busy || tooFew || tooMany || tooFewSongs || !playerReady} onClick={onStart}>
         Starta spelet
@@ -388,7 +394,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
   }, [fast, game.phase, lockedAt, code, game.turnIndex]);
   const result = game.phase === 'revealed' ? game.lastResult : null;
   const selectedSlot = move.data?.slotIndex ?? (game.phase === 'placing' ? (team?.pendingSlot ?? null) : null);
-  const byArtist = Boolean(team && gameMode(game) === 'family' && teamLevel(team) === 'easy');
+  const byArtist = Boolean(team && answersByChoice(game, team));
+  const texts = choiceTexts(game);
   const choices = game.choices ?? [];
   const picked = move.data?.choice ?? result?.choice ?? null;
   const pickedName = picked !== null ? choices[picked] : undefined;
@@ -434,8 +441,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
             <>
               <span className="card-year">{card.year}</span>
               <span>
-                <span className="card-title">{card.title}</span>
-                <span className="card-artist">{card.artist}</span>
+                <span className="card-title">{cardLines(card).main}</span>
+                <span className="card-artist">{cardLines(card).sub}</span>
               </span>
             </>
           ) : (
@@ -447,8 +454,8 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
       {result && (
         <div className={`result ${result.correct ? 'correct' : 'wrong'}`} role="status">
           <strong>{result.correct ? 'Rätt!' : 'Fel!'}</strong>{' '}
-          {result.card.title} – {result.card.artist} ({result.card.year})
-          {byArtist && <p>Laget valde {pickedName ?? 'ingen artist'}.</p>}
+          {result.card.film ? `${result.card.film}: ` : ''}{result.card.title} – {result.card.artist} ({result.card.year})
+          {byArtist && <p>Laget valde {pickedName ?? `ingen ${texts.noun}`}.</p>}
           {result.reachedTarget && <p><strong>{team?.name} har {game.settings.targetLength} kort och vinner!</strong></p>}
         </div>
       )}
@@ -457,7 +464,7 @@ function Turn({ code, game, teams, state, busy, needsPlay, onPlay, onReveal, onN
         <p className="move-status">
           {move.data
             ? `${team?.name ?? 'Laget'} har låst ${pickedName ?? 'sitt svar'}.${fast ? ' Svaret visas automatiskt om några sekunder.' : ''}`
-            : `Väntar på att ${team?.name ?? 'laget'} ${byArtist ? 'väljer artist' : 'placerar'}…`}
+            : `Väntar på att ${team?.name ?? 'laget'} ${byArtist ? `väljer ${texts.noun}` : 'placerar'}…`}
         </p>
       )}
 

@@ -9,13 +9,13 @@ import { UndoDock } from '../components/UndoDock';
 import { MascotPin } from '../components/Mascot';
 import { ProfileForm } from '../components/ProfileForm';
 import { TicketTimeline } from '../components/TicketTimeline';
-import { MAX_TEAMS } from '../engine/game';
+import { cardLines, MAX_TEAMS } from '../engine/game';
 import { useCollection, useDoc } from '../hooks/firestore';
 import { useNow, usePresence, useUser, useWakeLock } from '../hooks/misc';
 import { gameRef, moveRef, teamsRef } from '../game/refs';
 import { leaveGame, lockChoice, lockMove, selectSlot, setLevel, updateProfile } from '../game/teamActions';
 import { getMascot, MASCOTS, type MascotMood } from '../game/mascots';
-import { isFast, LEVELS, showsChoices } from '../game/modes';
+import { answersByChoice, choiceTexts, isFast, LEVELS, showsChoices } from '../game/modes';
 import { gameMode, isOnline, teamLevel, type GameDoc, type MoveDoc, type Team, type TeamDoc } from '../game/types';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -233,6 +233,11 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
           />
         </div>
       )}
+      {gameMode(game) === 'film' && (
+        <p className="hint">
+          Film-läget. Lyssna och <strong>gissa vilken film låten kommer från</strong>, bland fyra.
+        </p>
+      )}
       <p className="hint">Väntar på att spelledaren startar spelet…</p>
       <h2>Lag ({teams.length})</h2>
       <Bands teams={teams} now={now} showCount={false} shownUid={me.uid} />
@@ -268,7 +273,8 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
   const myTurn = game.currentTeamUid === me.uid;
   const locked = Boolean(move.data);
   // Familj: ett lätt lag väljer artist i stället för lucka, och alla andra får gissa med.
-  const byArtist = myTurn && gameMode(game) === 'family' && teamLevel(me) === 'easy';
+  const byArtist = myTurn && answersByChoice(game, me);
+  const texts = choiceTexts(game);
   const canPlace = myTurn && !byArtist && game.phase === 'placing' && !locked && !move.loading;
   const canPick = byArtist && game.phase === 'placing' && !locked && !move.loading;
   const result = game.phase === 'revealed' ? game.lastResult : null;
@@ -334,8 +340,8 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
           <div className={`stub${result.correct ? ' won' : ' missed'}`}>
             <span className="stub-year">{result.card.year}</span>
             <span className="stub-text">
-              <span className="stub-title">{result.card.title}</span>
-              <span className="stub-artist">{result.card.artist}</span>
+              <span className="stub-title">{cardLines(result.card).main}</span>
+              <span className="stub-artist">{cardLines(result.card).sub}</span>
             </span>
             {result.card.imageUrl && <img className="stub-art" src={result.card.imageUrl} alt="" />}
           </div>
@@ -352,7 +358,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
             isFast(game) ? 'Låst! Svaret visas om några sekunder.' : 'Låst! Väntar på att spelledaren avslöjar.'
           ) : byArtist ? (
             <>
-              Lyssna och tryck på artisten som sjunger. <strong>Tryck sedan Lås.</strong>
+              Lyssna och {texts.how}. <strong>Tryck sedan Lås.</strong>
             </>
           ) : (
             <>
@@ -399,7 +405,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       {canPick && (
         <div className="sticky-actions">
           <button type="button" className="lock" disabled={pick === null || busy} onClick={(e) => void lock(e.timeStamp)}>
-            {pick === null ? 'Välj en artist' : busy ? 'Låser…' : 'Lås'}
+            {pick === null ? texts.pick : busy ? 'Låser…' : 'Lås'}
           </button>
         </div>
       )}

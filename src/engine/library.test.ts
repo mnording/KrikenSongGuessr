@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import films from '../data/films.json';
 import songs from '../data/songs.json';
 import type { Song } from './game';
 import { decadeOf, decadesIn, filterSongs, hasEnoughSongs, SONG_TAGS, songsNeeded } from './library';
@@ -10,6 +11,17 @@ describe('låtbiblioteket', () => {
   it('har bara kända etiketter och unika id:n', () => {
     for (const s of list) for (const t of s.tags ?? []) expect(SONG_TAGS, s.id).toContain(t);
     expect(new Set(list.map((s) => s.id)).size).toBe(list.length);
+  });
+
+  it('har en filmlista där varje låt har en film, ett premiärår och ett unikt id', () => {
+    const filmList = films as Song[];
+    for (const s of filmList) {
+      expect(s.film, s.id).toBeTruthy();
+      expect(s.year, s.id).toBeGreaterThan(1900);
+    }
+    expect(new Set(filmList.map((s) => s.id)).size).toBe(filmList.length);
+    // Det behövs gott om olika filmer för att alternativen ska räcka.
+    expect(new Set(filmList.map((s) => s.film)).size).toBeGreaterThan(40);
   });
 
   it('räknar decennier', () => {

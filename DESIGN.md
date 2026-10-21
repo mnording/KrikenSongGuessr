@@ -326,6 +326,12 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 - **Open (ours):** choosing a slot tears the strip open into an unnotched stub with a 3px dashed lime edge, lime wash, a lime "?" and "Här – mellan X och Y"; it grows in (0.35s scale and fade).
 - **Open (theirs):** the same stub, transparent with a Theirs Outline dashed edge and muted text, reading "De funderar här…" or "Låst här".
 
+### Undo (fast mode)
+- After a team locks in fast mode, the dock shows "Ångra (5)" counting down: Night Raised fill, 2px Acid Lime edge, display face at 1.5rem, like the taunt button. The hint above reads "Låst! Svaret visas om några sekunder." Undoing returns the team to its selection with the same choice still marked, so it can change and lock again. A late tap shows "För sent att ångra" instead of an error.
+
+### Film cards
+- In Film mode a stub shows the film as its title line and "song – artist" as its second line; the year is the premiere year. The host's answer panel and result say the film first.
+
 ### Taunts
 Teams waiting for their turn tease the team that is placing, in `src/components/Taunts.tsx`.
 - **Dock:** while a team places, the waiting teams get a docked button "😏 Skicka en pik": Night Raised fill, 2px Acid Lime edge, display face at 1.4rem. It opens a Night Raised panel above it: the team's own mascot line across the full width (with its pin), then the six shared lines in two columns, each a left-aligned Ticket Paper slab of 48px, so the panel covers about half the screen. The panel closes when a taunt is sent or the turn changes. After sending, the button turns dashed and muted with a countdown ("Pika igen om 7 s", or "Reagera igen om 7 s" after the reveal), counted from the team's stored taunt so it survives a reload.
