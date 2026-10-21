@@ -1,16 +1,18 @@
 import { getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ErrorText, Loading, Screen } from '../components/Common';
 import { useSpotifyLoggedIn, useUser } from '../hooks/misc';
 import { createGame, rememberedHostGame } from '../game/hostActions';
 import { gameRef } from '../game/refs';
 import type { GameDoc } from '../game/types';
-import { login, logout } from '../spotify/auth';
+import { login, logout, pendingOwnClientId } from '../spotify/auth';
 import { errorMessage } from '../util';
 
 export default function HostStart() {
   const navigate = useNavigate();
+  // Spelledaren kom hit direkt efter att ha kopplat sin Spotify-app i guiden.
+  const welcome = useSearchParams()[0].has('klar');
   const { user, error: authError } = useUser();
   const spotify = useSpotifyLoggedIn();
   const [previous, setPrevious] = useState<{ code: string; game: GameDoc } | null>(null);
@@ -34,11 +36,22 @@ export default function HostStart() {
   if (!spotify) {
     return (
       <Screen title="Spelledare">
+        {pendingOwnClientId() && (
+          <div className="card-box notice">
+            <h2>Inloggningen med din Spotify-app blev inte klar</h2>
+            <p>
+              <Link to="/host/guide#felsok" className="link">Se vad som brukar vara fel</Link>
+            </p>
+          </div>
+        )}
         <p>Logga in med Spotify Premium. Musiken spelas från den här telefonen, så koppla gärna in en högtalare.</p>
         <button type="button" className="primary big" onClick={() => login('/host').catch((e) => setError(errorMessage(e)))}>
           Logga in med Spotify
         </button>
         <ErrorText error={error} />
+        <p>
+          <Link to="/host/guide" className="link">Första gången? Så blir du spelledare</Link>
+        </p>
         <Link to="/" className="link">Tillbaka</Link>
       </Screen>
     );
@@ -58,6 +71,12 @@ export default function HostStart() {
 
   return (
     <Screen title="Spelledare">
+      {welcome && (
+        <div className="card-box handoff">
+          <h2>Klart, du är spelledare</h2>
+          <p>Musiken spelas härifrån. Koppla in en högtalare, skapa ett spel och låt lagen skanna koden.</p>
+        </div>
+      )}
       {previous && (
         <div className="card-box">
           <h2>Pågående spel</h2>
