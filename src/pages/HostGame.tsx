@@ -29,6 +29,10 @@ import { answersByChoice, choiceTexts, FAST_UNDO_MS, isFast, MODES } from '../ga
 import { gameMode, type GameDoc, type MoveDoc, type PrivateState, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
 import { albumArt, loadFilms, loadSongs, resolveUri } from '../spotify/catalog';
+import { posterUrl } from '../tmdb/match';
+
+/** Kortets bild: filmens affisch i Film-läget när den finns, annars albumbilden från Spotify. */
+const cardArt = (song: Song) => (song.poster ? Promise.resolve(posterUrl(song.poster)) : albumArt(song));
 import { activateFromGesture, disconnectPlayer, initPlayer, pause, playTrack, resume } from '../spotify/player';
 import { errorMessage, genitive, textOn } from '../util';
 
@@ -166,7 +170,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
           playerReady={player.status === 'ready'}
           onStart={() =>
             act(async () => {
-              const card = await startGame(code, game, teams, songs, albumArt, playable);
+              const card = await startGame(code, game, teams, songs, cardArt, playable);
               await playCard(card, game.turnIndex + 1);
             })
           }
@@ -210,7 +214,7 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
         onReveal={(team, move) =>
           act(async () => {
             if (!state?.currentCard) throw new Error('Inget aktuellt kort');
-            await reveal(code, game, team, move, state.currentCard, albumArt);
+            await reveal(code, game, team, move, state.currentCard, cardArt);
           })
         }
         onNext={advance}

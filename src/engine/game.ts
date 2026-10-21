@@ -11,6 +11,9 @@ export type Song = {
   tags?: SongTag[];
   /** Film-läget: filmen låten kommer från. year är då filmens premiärår. */
   film?: string;
+  /** Film-läget: filmen hos TMDB och sökvägen till dess affisch, hämtade med verktyget på /host/songs. */
+  tmdbId?: number;
+  poster?: string;
 };
 
 export type TimelineCard = {

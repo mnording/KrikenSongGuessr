@@ -331,7 +331,8 @@ Every team is a mascot: ten characters in `src/game/mascots.ts` (name, colour, b
 - In the host lobby, fast mode is its own "Snabbläge" section with a toggle that reads "Snabbläge: på" or "Snabbläge: av" and an explanation under it.
 
 ### Film cards
-- In Film mode a stub shows the film as its title line and "song – artist" as its second line; the year is the premiere year. The host's answer panel and result say the film first.
+- In Film mode a stub shows the film as its title line and "song – artist" as its second line; the year is the premiere year. Its picture is the film poster from TMDB in poster proportions (44×64px instead of the 44px square album art), falling back to Spotify album art. The host's answer panel and result say the film first.
+- In Film mode the team footer carries the TMDB attribution ("Filmaffischer från TMDB …"), as TMDB's terms require.
 
 ### Taunts
 Teams waiting for their turn tease the team that is placing, in `src/components/Taunts.tsx`.

@@ -343,7 +343,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
               <span className="stub-title">{cardLines(result.card).main}</span>
               <span className="stub-artist">{cardLines(result.card).sub}</span>
             </span>
-            {result.card.imageUrl && <img className="stub-art" src={result.card.imageUrl} alt="" />}
+            {result.card.imageUrl && <img className={`stub-art${result.card.film ? ' poster' : ''}`} src={result.card.imageUrl} alt="" />}
           </div>
         </div>
       )}
@@ -421,6 +421,12 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
             </button>
           )}
         </div>
+      )}
+      {gameMode(game) === 'film' && (
+        <p className="fest-foot">
+          Filmaffischer från <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">TMDB</a>. Appen använder
+          TMDB:s API men är inte godkänd eller certifierad av TMDB.
+        </p>
       )}
       <p className="fest-foot">
         Först till {game.settings.targetLength} kort vinner · {game.cardsLeft} kort kvar i leken

@@ -61,7 +61,7 @@ export function TicketTimeline({
               <span className="stub-title">{cardLines(card).main}</span>
               <span className="stub-artist">{cardLines(card).sub}</span>
             </span>
-            {card.imageUrl && <img className="stub-art" src={card.imageUrl} alt="" loading="lazy" />}
+            {card.imageUrl && <img className={`stub-art${card.film ? ' poster' : ''}`} src={card.imageUrl} alt="" loading="lazy" />}
           </li>
         </Fragment>
       ))}

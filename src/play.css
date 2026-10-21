@@ -721,3 +721,13 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/* Film-lägets affischer är stående, så de får affischens proportioner i stället för en kvadrat. */
+.stub-art.poster {
+  width: 44px;
+  height: 64px;
+}
+
+.fest-foot a {
+  color: inherit;
+}

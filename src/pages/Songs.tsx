@@ -6,18 +6,39 @@ import type { Song } from '../engine/game';
 import { usePlayer, useSpotifyLoggedIn } from '../hooks/misc';
 import { login } from '../spotify/auth';
 import { cachedUri, exportPlaylist, loadFilms, loadSongs, overrideUri, resolveUri, spotifyYear } from '../spotify/catalog';
+import { normalizeName } from '../engine/artist';
+import { posterUrl } from '../tmdb/match';
+import { findFilm, hasTmdbKey, type TmdbFilm } from '../tmdb/tmdb';
 import { activateFromGesture, initPlayer, pause, playTrack } from '../spotify/player';
 import { errorMessage } from '../util';
 
 /** spotifyYear: albumets år på Spotify, när det är kontrollerat. */
-type RowState = { uri: string | null; status: 'idle' | 'busy' | 'ok' | 'error'; message?: string; spotifyYear?: number | null };
+/** tmdb: filmen hos TMDB när verktyget har hämtat den, null om den inte hittades. */
+type RowState = {
+  uri: string | null;
+  status: 'idle' | 'busy' | 'ok' | 'error';
+  message?: string;
+  spotifyYear?: number | null;
+  tmdb?: TmdbFilm | null;
+};
 
 /** Mer än ett års skillnad är värt att titta på. Ofta är det en remaster, men ibland fel år hos oss. */
 const yearOff = (song: Song, row: RowState | undefined) =>
   row?.spotifyYear != null && Math.abs(row.spotifyYear - song.year) > 1;
 
-function download(filename: string, data: unknown) {
-  const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
+/** Samma format som i repot: en låt per rad, så att en ändring blir en rad i diffen. */
+function toJsonLines(list: object[]): string {
+  const line = (item: object) =>
+    JSON.stringify(item)
+      .replace(/^\{/, '{ ')
+      .replace(/\}$/, ' }')
+      .replace(/":/g, '": ')
+      .replace(/,"/g, ', "');
+  return '[\n' + list.map((item) => '  ' + line(item)).join(',\n') + '\n]\n';
+}
+
+function download(filename: string, data: object[]) {
+  const blob = new Blob([toJsonLines(data)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -46,6 +67,7 @@ export default function Songs() {
   const [running, setRunning] = useState(false);
   const [playlist, setPlaylist] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [tmdbDone, setTmdbDone] = useState(false);
   const [yearCheck, setYearCheck] = useState<{ done: number; total: number; failed: number; finished: boolean } | null>(null);
 
   useEffect(() => {
@@ -124,11 +146,35 @@ export default function Songs() {
     setRow(song.id, { uri, status: 'ok' });
   };
 
+  // Filmlistan får TMDB:s premiärår och affisch. Titlarna rättas för hand, eftersom TMDB ibland
+  // saknar svensk översättning och då ger den engelska.
   const exportSongs = () =>
     download(
       file,
-      songs.map((s) => ({ ...s, spotifyUri: rows[s.id]?.uri ?? s.spotifyUri })),
+      songs.map((s) => {
+        const tmdb = rows[s.id]?.tmdb;
+        const base = { ...s, spotifyUri: rows[s.id]?.uri ?? s.spotifyUri };
+        if (!tmdb) return base;
+        return { ...base, year: tmdb.year ?? s.year, tmdbId: tmdb.id, ...(tmdb.poster ? { poster: tmdb.poster } : {}) };
+      }),
     );
+
+  const fetchTmdb = async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      for (const song of songs) {
+        if (!song.film) continue;
+        const film = await findFilm(song.film, song.year);
+        setRows((r) => ({ ...r, [song.id]: { ...r[song.id], tmdb: film } }));
+      }
+      setTmdbDone(true);
+    } catch (err) {
+      setError(`TMDB: ${errorMessage(err)}`);
+    } finally {
+      setRunning(false);
+    }
+  };
 
   const exportFromPlaylist = async () => {
     setError(null);
@@ -156,10 +202,27 @@ export default function Songs() {
         <button type="button" disabled={running || resolved === 0} onClick={() => void checkYears()}>
           {yearCheck && !yearCheck.finished ? `Kontrollerar… ${yearCheck.done} av ${yearCheck.total}` : 'Kontrollera år'}
         </button>
+        {films && (
+          <button type="button" disabled={running || !hasTmdbKey()} onClick={() => void fetchTmdb()}>
+            Hämta från TMDB
+          </button>
+        )}
         <button type="button" onClick={exportSongs}>Ladda ner {file}</button>
         <button type="button" onClick={() => void pause()}>Pausa</button>
       </div>
       <ErrorText error={error ?? player.error} />
+      {films && !hasTmdbKey() && (
+        <p className="muted small">
+          För premiärår och affischer: skapa en API-nyckel på themoviedb.org, lägg den i .env.local som
+          VITE_TMDB_API_KEY och öppna den här sidan med npm run dev. Nyckeln används bara lokalt.
+        </p>
+      )}
+      {films && tmdbDone && (
+        <p className="muted" role="status">
+          Klart: {songs.filter((s) => s.film && rows[s.id]?.tmdb === null).length} filmer hittades inte på TMDB. Ladda ner
+          {` ${file} `}för att spara premiärår och affischer. Titlarna ändras inte, rätta dem för hand där TMDB skiljer sig.
+        </p>
+      )}
       {yearCheck?.finished && (
         <p className="muted" role="status">
           {off === 0 ? 'Klart: inga avvikande år.' : `Klart: ${off} låtar har ett annat år på Spotify. Ofta är det en remaster eller samling, men kontrollera originalåret.`}
@@ -175,6 +238,9 @@ export default function Songs() {
           return (
             <li key={song.id} className={row?.status}>
               <span className="card-year">{song.year}</span>
+              {(row?.tmdb?.poster ?? song.poster) && (
+                <img className="song-poster" src={posterUrl((row?.tmdb?.poster ?? song.poster)!, 'w92')} alt="" loading="lazy" />
+              )}
               <span className="song-text">
                 <span className="card-title">{song.title}</span>
                 <span className="card-artist">
@@ -186,6 +252,15 @@ export default function Songs() {
                   <span className="year-off small">
                     <span aria-hidden="true">⚠ </span>Spotify har {row!.spotifyYear}, vi har {song.year}
                   </span>
+                )}
+                {row?.tmdb === null && <span className="year-off small">Hittades inte på TMDB</span>}
+                {row?.tmdb && row.tmdb.year !== null && row.tmdb.year !== song.year && (
+                  <span className="year-off small">
+                    <span aria-hidden="true">⚠ </span>TMDB har premiär {row.tmdb.year}, vi har {song.year}
+                  </span>
+                )}
+                {row?.tmdb && song.film && normalizeName(row.tmdb.title) !== normalizeName(song.film) && (
+                  <span className="muted small">TMDB:s titel: {row.tmdb.title}</span>
                 )}
                 {row?.status === 'error' && <span className="error small">{row.message}</span>}
                 {row?.uri && <span className="muted small">{row.uri}</span>}
@@ -211,6 +286,12 @@ export default function Songs() {
           Exportera till JSON
         </button>
       </div>
+      {films && (
+        <p className="muted small">
+          Filmdata och affischer från <a href="https://www.themoviedb.org">TMDB</a>. Appen använder TMDB:s API men är inte
+          godkänd eller certifierad av TMDB.
+        </p>
+      )}
       <Link to="/host" className="link">Tillbaka</Link>
     </Screen>
   );
