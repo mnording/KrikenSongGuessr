@@ -60,6 +60,7 @@ export function pendingOwnClientId(): string | null {
     const id = sessionStorage.getItem(ATTEMPT_KEY);
     return id && id !== KRIKEN_CLIENT_ID?.toLowerCase() ? id : null;
   } catch {
+    // sessionStorage kan vara blockerad i privat läge. Då finns inget påbörjat försök att visa. Rapporteras inte.
     return null;
   }
 }
@@ -73,6 +74,7 @@ function readTokens(): Tokens | null {
     const raw = localStorage.getItem(TOKEN_KEY);
     return raw ? (JSON.parse(raw) as Tokens) : null;
   } catch {
+    // Blockerad lagring eller trasig JSON: spelledaren får logga in igen. Rapporteras inte.
     return null;
   }
 }
@@ -242,6 +244,7 @@ export async function checkAccess(): Promise<Access> {
   const own = clientId !== KRIKEN_CLIENT_ID ? clientId : null;
   const previous = sessionStorage.getItem(PREVIOUS_KEY);
   sessionStorage.removeItem(PREVIOUS_KEY);
+  // Kontrollen letar bara efter 403 (kontot inte tillagt). Ett nätfel här släpper igenom, och nästa anrop visar felet.
   const res = await spotifyFetch('/me').catch(() => null);
   if (res?.status === 403) {
     if (previous) {

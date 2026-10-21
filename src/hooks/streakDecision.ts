@@ -5,6 +5,7 @@ import { decisionFor } from '../engine/streak';
 import { isStreak, STREAK_UNDO_MS } from '../game/modes';
 import { teamRef } from '../game/refs';
 import type { GameDoc, StreakAction, Team, TeamDoc } from '../game/types';
+import { reportError, RETRIES_BEFORE_REPORT } from '../sentry';
 
 type Options = {
   code: string;
@@ -45,6 +46,7 @@ export function useStreakDecision({ code, game, team, busy, onDecide }: Options)
     if (!action || !uid) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    let failures = 0;
     const attempt = () => {
       getDoc(teamRef(code, uid))
         .then((snap) => {
@@ -56,7 +58,9 @@ export function useStreakDecision({ code, game, team, busy, onDecide }: Options)
           if (working) timer = setTimeout(attempt, 1000);
           else if (now.lastResult) decide(decisionFor(action, now.lastResult, now.cardsLeft));
         })
-        .catch(() => {
+        .catch((err) => {
+          // Ett enstaka nätfel rättar sig vid nästa försök. Tre i rad betyder att turen står still: rapportera en gång.
+          if (++failures === RETRIES_BEFORE_REPORT) reportError(err, 'host.streakDecision');
           if (!cancelled) timer = setTimeout(attempt, 2000);
         });
     };

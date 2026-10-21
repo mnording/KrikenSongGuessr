@@ -7,7 +7,8 @@ import { createGame, rememberedHostGame } from '../game/hostActions';
 import { gameRef } from '../game/refs';
 import type { GameDoc } from '../game/types';
 import { login, logout, pendingOwnClientId } from '../spotify/auth';
-import { errorMessage } from '../util';
+import { reportError } from '../sentry';
+import { errorMessage, isDenied } from '../util';
 
 export default function HostStart() {
   const navigate = useNavigate();
@@ -28,7 +29,10 @@ export default function HostStart() {
         const game = snap.data() as GameDoc | undefined;
         if (game && game.hostUid === user.uid && game.status !== 'finished') setPrevious({ code, game });
       })
-      .catch(() => {});
+      // Bara knappen "Fortsätt" hänger på det här. Nekat betyder att spelet inte är vårt längre, det är väntat.
+      .catch((err) => {
+        if (!isDenied(err)) reportError(err, 'host.previous');
+      });
   }, [user]);
 
   if (!user) return authError ? <Screen><ErrorText error={authError} /></Screen> : <Loading />;
@@ -45,7 +49,13 @@ export default function HostStart() {
           </div>
         )}
         <p>Logga in med Spotify Premium. Musiken spelas från den här telefonen, så koppla gärna in en högtalare.</p>
-        <button type="button" className="primary big" onClick={() => login('/host').catch((e) => setError(errorMessage(e)))}>
+        <button type="button" className="primary big" onClick={() =>
+            login('/host').catch((err) => {
+              reportError(err, 'spotify.login');
+              setError(errorMessage(err));
+            })
+          }
+        >
           Logga in med Spotify
         </button>
         <ErrorText error={error} />
@@ -64,6 +74,7 @@ export default function HostStart() {
       const code = await createGame(user.uid);
       navigate(`/host/${code}`);
     } catch (err) {
+      reportError(err, 'host.create');
       setError(`Kunde inte skapa spelet: ${errorMessage(err)}`);
       setBusy(false);
     }

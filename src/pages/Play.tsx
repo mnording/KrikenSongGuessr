@@ -24,7 +24,8 @@ import { useT } from '../i18n/context';
 import { LangSwitch } from '../i18n/LangSwitch';
 import { Rich } from '../i18n/Rich';
 import type { Messages } from '../i18n/sv';
-import { errorMessage, textOn } from '../util';
+import { reportError } from '../sentry';
+import { errorMessage, isDenied, textOn } from '../util';
 
 /** Fasta armbandstexter som blir för långa på något språk får den mindre storleken, precis som en fråga. */
 const LONG_BAND = 10;
@@ -211,7 +212,7 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
 
   // Max 10 lag. Den som kom för sent lämnar själv lobbyn.
   useEffect(() => {
-    if (full) void leaveGame(code, me.uid).catch(() => {});
+    if (full) void leaveGame(code, me.uid).catch((err) => reportError(err, 'team.leave'));
   }, [full, code, me.uid]);
 
   if (full) {
@@ -251,7 +252,10 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
           onSubmit={(name, mascot) => {
             updateProfile(code, me.uid, name, mascot)
               .then(() => setEditing(false))
-              .catch((err) => setError(errorMessage(err)));
+              .catch((err) => {
+                reportError(err, 'team.profile');
+                setError(errorMessage(err));
+              });
           }}
         />
       )}
@@ -264,7 +268,13 @@ function Lobby({ code, game, me, teams }: { code: string; game: GameDoc; me: Tea
             name="level"
             options={t.levels}
             value={teamLevel(me)}
-            onChange={(level) => void setLevel(code, me.uid, level).catch((err) => setError(errorMessage(err)))}
+            onChange={(level) =>
+              void setLevel(code, me.uid, level).catch((err) => {
+                // Nekat betyder att spelet just startade, då är nivån låst. Det är väntat.
+                if (!isDenied(err)) reportError(err, 'team.level');
+                setError(errorMessage(err));
+              })
+            }
           />
         </div>
       )}
@@ -319,6 +329,7 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
 
   const choose = (index: number) => {
     setSlot(index);
+    // Visar bara de andra lagen var laget pekar. Det som räknas är Lås, som rapporterar sina fel. Rapporteras inte.
     void selectSlot(code, me.uid, index).catch(() => {});
   };
 
@@ -332,6 +343,8 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
       if (byArtist) await lockChoice(code, me.uid, game.turnIndex, pick!);
       else await lockMove(code, me.uid, game.turnIndex, slot!);
     } catch (err) {
+      // Även nekat rapporteras: kan laget i tur inte låsa står spelet still.
+      reportError(err, 'team.lock');
       setError(t.play.lockFailed(errorMessage(err)));
     } finally {
       setBusy(false);

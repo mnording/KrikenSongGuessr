@@ -74,7 +74,13 @@ try {
 - **Rapportera** fel som spelaren inte orsakat och inte kan rätta: Spotify, Firestore-skrivningar som borde ha gått, oväntade svar från API:er, fel i spelledarens handlingar.
 - **Fel som bara är text** (SDK-event, callbacks med `{ message }`) görs om till ett riktigt fel med `spotifyError(event, message)`, eller `new Error(...)` med ett tydligt `name`, så att Sentry får ett stackspår och kan gruppera dem.
 - **Rapportera inte** det som är väntat och redan har ett svar i gränssnittet: `permission-denied` när ångerfönstret eller pikspärren har stängt, en ny tur som gör ett drag inaktuellt, validering av formulär, och hjärtslag som misslyckas på dåligt nät (`.catch(() => {})` med en kommentar). Annars drunknar de riktiga felen.
-- **`area`** är en tagg i Sentry på formen `<område>.<vad>`, till exempel `spotify.playback_error`, `spotify.play`, `host.action`. Återanvänd en befintlig när det passar, så att filtren håller.
+- **Nekat men oväntat?** `isDenied(err)` i `src/util.ts` säger om Firestore nekade. Skriv `if (!isDenied(err)) reportError(...)` där nekat är ett väntat svar, och rapportera allt där nekat skulle betyda att spelet står still (Lås, Fortsätt eller lås, gå med).
+- **Loopar som försöker igen** rapporterar inte varje misslyckande. De rapporterar en gång, när `RETRIES_BEFORE_REPORT` försök i rad har misslyckats (se `src/hooks/autoReveal.ts`).
+- **`area`** är en tagg i Sentry på formen `<område>.<vad>`, till exempel `spotify.playback_error`, `spotify.play`, `host.action`. Återanvänd en befintlig när det passar, så att filtren håller. De som finns:
+  - `spotify.*`: `init`, `connect`, `token`, `login`, `play`, `export`, och SDK:ns `playback_error`, `account_error`, `authentication_error`, `initialization_error`
+  - `host.*`: `action`, `create`, `settings`, `device`, `previous`, `autoReveal`, `streakDecision`
+  - `team.*`: `join`, `leave`, `profile`, `level`, `lock`, `undo`, `streak`, `guess`, `taunt`
+  - `auth.signin`, `tmdb`
 - **Inga personuppgifter i felet.** Meddelandet går till Sentry. Lägg inte lagnamn (de skrivs av spelarna), e-post, tokens eller hela adresser i det. Spelkoden går bra.
 - **Testa** att ett nytt fel faktiskt rapporteras genom att mocka `@sentry/react`, som i `src/sentry.test.ts`.
 

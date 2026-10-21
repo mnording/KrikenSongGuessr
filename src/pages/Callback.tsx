@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ErrorText, Screen } from '../components/Common';
+import { reportError } from '../sentry';
 import { completeLogin } from '../spotify/auth';
 import { errorMessage } from '../util';
 
@@ -15,7 +16,10 @@ export default function Callback() {
     started.current = true;
     completeLogin(window.location.search)
       .then((path) => navigate(path, { replace: true }))
-      .catch((err) => setError(errorMessage(err)));
+      .catch((err) => {
+        reportError(err, 'spotify.login');
+        setError(errorMessage(err));
+      });
   }, [navigate]);
 
   return (

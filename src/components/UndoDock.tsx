@@ -4,6 +4,8 @@ import { FAST_UNDO_MS } from '../game/modes';
 import { undoMove } from '../game/teamActions';
 import { useNow } from '../hooks/misc';
 import { useT } from '../i18n/context';
+import { reportError } from '../sentry';
+import { isDenied } from '../util';
 
 type Props = {
   code: string;
@@ -24,7 +26,11 @@ export function UndoDock({ code, turnIndex, lockedAt, onUndone }: Props) {
     setBusy(true);
     undoMove(code, turnIndex)
       .then(onUndone)
-      .catch(() => setError(t.undo.tooLate))
+      .catch((err) => {
+        // Nekad betyder att ångerfönstret har stängt, det är väntat.
+        if (!isDenied(err)) reportError(err, 'team.undo');
+        setError(t.undo.tooLate);
+      })
       .finally(() => setBusy(false));
   };
 

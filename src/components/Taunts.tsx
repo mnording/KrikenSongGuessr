@@ -9,7 +9,8 @@ import { canContinue } from '../engine/streak';
 import type { GameDoc, Team } from '../game/types';
 import { useNow } from '../hooks/misc';
 import { useT } from '../i18n/context';
-import { errorMessage, textOn } from '../util';
+import { reportError } from '../sentry';
+import { errorMessage, isDenied, textOn } from '../util';
 import { ErrorText } from './Common';
 import { MascotPin } from './Mascot';
 
@@ -91,10 +92,11 @@ export function TauntDock({ code, game, me, chooser }: { code: string; game: Gam
     setError(null);
     setSentAt(performance.timeOrigin + at);
     sendTaunt(code, me.uid, game.turnIndex, id).catch((err) => {
-      // Nekad betyder oftast att spärren eller turen tog slut. Då står nedräkningen kvar.
-      if ((err as { code?: string }).code === 'permission-denied') {
+      // Nekad betyder oftast att spärren eller turen tog slut, det är väntat. Då står nedräkningen kvar.
+      if (isDenied(err)) {
         setError(t.tauntDock.notThrough);
       } else {
+        reportError(err, 'team.taunt');
         setSentAt(0);
         setError(t.tauntDock.failed(errorMessage(err)));
       }

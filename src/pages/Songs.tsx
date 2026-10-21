@@ -10,6 +10,7 @@ import { normalizeName } from '../engine/artist';
 import { posterUrl } from '../tmdb/match';
 import { findFilm, hasTmdbKey, type TmdbFilm } from '../tmdb/tmdb';
 import { activateFromGesture, initPlayer, pause, playTrack } from '../spotify/player';
+import { reportError } from '../sentry';
 import { errorMessage } from '../util';
 
 /** spotifyYear: albumets år på Spotify, när det är kontrollerat. */
@@ -78,7 +79,12 @@ export default function Songs() {
   }, [films]);
 
   useEffect(() => {
-    if (spotify) void initPlayer().catch((err) => setError(errorMessage(err)));
+    if (spotify) {
+      void initPlayer().catch((err) => {
+        reportError(err, 'spotify.init');
+        setError(errorMessage(err));
+      });
+    }
   }, [spotify]);
 
   if (!spotify) {
@@ -102,6 +108,7 @@ export default function Songs() {
       try {
         setRow(song.id, { uri: await resolveUri(song), status: 'ok' });
       } catch (err) {
+        // Att en låt inte hittas är verktygets svar, inte ett fel i appen. Det visas på raden. Rapporteras inte.
         setRow(song.id, { uri: null, status: 'error', message: errorMessage(err) });
       }
     }
@@ -128,12 +135,20 @@ export default function Songs() {
 
   const testPlay = async (song: Song) => {
     activateFromGesture();
+    let uri: string;
     try {
-      const uri = rows[song.id]?.uri ?? (await resolveUri(song));
-      setRow(song.id, { uri, status: 'ok' });
+      uri = rows[song.id]?.uri ?? (await resolveUri(song));
+    } catch (err) {
+      // Låten hittades inte: verktygets svar, inte ett fel i appen. Rapporteras inte.
+      setRow(song.id, { uri: null, status: 'error', message: errorMessage(err) });
+      return;
+    }
+    setRow(song.id, { uri, status: 'ok' });
+    try {
       await playTrack(uri);
     } catch (err) {
-      setRow(song.id, { uri: rows[song.id]?.uri ?? null, status: 'error', message: errorMessage(err) });
+      reportError(err, 'spotify.play');
+      setRow(song.id, { uri, status: 'error', message: errorMessage(err) });
     }
   };
 
@@ -170,6 +185,7 @@ export default function Songs() {
       }
       setTmdbDone(true);
     } catch (err) {
+      reportError(err, 'tmdb');
       setError(`TMDB: ${errorMessage(err)}`);
     } finally {
       setRunning(false);
@@ -182,6 +198,7 @@ export default function Songs() {
     try {
       download('playlist-songs.json', await exportPlaylist(id));
     } catch (err) {
+      reportError(err, 'spotify.export');
       setError(errorMessage(err));
     }
   };

@@ -4,7 +4,8 @@ import { guessArtist } from '../game/teamActions';
 import { choiceTexts, LETTERS, showsChoices } from '../game/modes';
 import type { GameDoc, Team } from '../game/types';
 import { useT } from '../i18n/context';
-import { errorMessage } from '../util';
+import { reportError } from '../sentry';
+import { errorMessage, isDenied } from '../util';
 import { ArtistChoices } from './ArtistChoices';
 import { ErrorText } from './Common';
 import { MascotPin } from './Mascot';
@@ -38,7 +39,11 @@ export function FamilyRound({ code, game, me, myTurn, byArtist, pick, onPick }: 
 
   const guess = (index: number) => {
     setError(null);
-    guessArtist(code, me.uid, game.turnIndex, index).catch((err) => setError(t.family.failed(errorMessage(err))));
+    guessArtist(code, me.uid, game.turnIndex, index).catch((err) => {
+      // Nekad betyder att svaret just visades. Då står gissningen inte längre öppen.
+      if (!isDenied(err)) reportError(err, 'team.guess');
+      setError(t.family.failed(errorMessage(err)));
+    });
   };
 
   return (

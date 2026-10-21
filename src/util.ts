@@ -5,6 +5,14 @@ export function errorMessage(err: unknown): string {
   return String(err);
 }
 
+/**
+ * Firestore nekade enligt reglerna. Ofta väntat: ett fönster har stängt eller turen har gått vidare.
+ * Sådana fel rapporteras inte till Sentry där gränssnittet redan har ett svar på dem.
+ */
+export function isDenied(err: unknown): boolean {
+  return (err as { code?: string } | null)?.code === 'permission-denied';
+}
+
 /** Svensk genitiv: "Lags tur", men "Lars tur" och "Max tur". */
 export function genitive(name: string): string {
   return /[sxz]$/i.test(name.trim()) ? name : `${name}s`;

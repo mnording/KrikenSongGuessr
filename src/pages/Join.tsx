@@ -11,7 +11,8 @@ import type { MascotId } from '../game/mascots';
 import { gameMode, type GameDoc, type TeamLevel } from '../game/types';
 import { useT } from '../i18n/context';
 import { LangSwitch } from '../i18n/LangSwitch';
-import { errorMessage } from '../util';
+import { reportError } from '../sentry';
+import { errorMessage, isDenied } from '../util';
 
 export default function Join() {
   const { code = '' } = useParams();
@@ -28,7 +29,11 @@ export default function Join() {
     if (!user || !game.data) return;
     getDoc(teamRef(code, user.uid))
       .then((snap) => setAlreadyMember(snap.exists()))
-      .catch(() => setAlreadyMember(false));
+      .catch((err) => {
+        // Går läsningen inte får telefonen gå med på nytt. Nekat är väntat för den som inte är med.
+        if (!isDenied(err)) reportError(err, 'team.join');
+        setAlreadyMember(false);
+      });
   }, [user, code, game.data]);
 
   if (!/^\d{6}$/.test(code)) return <Navigate to="/" replace />;
@@ -68,6 +73,7 @@ export default function Join() {
       await joinGame(code, user.uid, name, mascot, level);
       navigate(`/play/${code}`, { replace: true });
     } catch (err) {
+      reportError(err, 'team.join');
       setError(t.joinPage.failed(errorMessage(err)));
       setBusy(false);
     }
