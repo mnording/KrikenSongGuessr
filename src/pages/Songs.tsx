@@ -5,11 +5,16 @@ import { ErrorText, Loading, Screen } from '../components/Common';
 import type { Song } from '../engine/game';
 import { usePlayer, useSpotifyLoggedIn } from '../hooks/misc';
 import { login } from '../spotify/auth';
-import { cachedUri, exportPlaylist, loadSongs, overrideUri, resolveUri } from '../spotify/catalog';
+import { cachedUri, exportPlaylist, loadSongs, overrideUri, resolveUri, spotifyYear } from '../spotify/catalog';
 import { activateFromGesture, initPlayer, pause, playTrack } from '../spotify/player';
 import { errorMessage } from '../util';
 
-type RowState = { uri: string | null; status: 'idle' | 'busy' | 'ok' | 'error'; message?: string };
+/** spotifyYear: albumets år på Spotify, när det är kontrollerat. */
+type RowState = { uri: string | null; status: 'idle' | 'busy' | 'ok' | 'error'; message?: string; spotifyYear?: number | null };
+
+/** Mer än ett års skillnad är värt att titta på. Ofta är det en remaster, men ibland fel år hos oss. */
+const yearOff = (song: Song, row: RowState | undefined) =>
+  row?.spotifyYear != null && Math.abs(row.spotifyYear - song.year) > 1;
 
 function download(filename: string, data: unknown) {
   const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
@@ -36,6 +41,7 @@ export default function Songs() {
   const [running, setRunning] = useState(false);
   const [playlist, setPlaylist] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [yearCheck, setYearCheck] = useState<{ done: number; total: number; failed: number; finished: boolean } | null>(null);
 
   useEffect(() => {
     void loadSongs().then((list) => {
@@ -75,6 +81,24 @@ export default function Songs() {
     setRunning(false);
   };
 
+  const checkYears = async () => {
+    const linked = songs.filter((s) => rows[s.id]?.uri);
+    setRunning(true);
+    setYearCheck({ done: 0, total: linked.length, failed: 0, finished: false });
+    let failed = 0;
+    try {
+      for (const [i, song] of linked.entries()) {
+        const year = await spotifyYear(song);
+        if (year === null) failed++;
+        setRows((r) => ({ ...r, [song.id]: { ...r[song.id], spotifyYear: year } }));
+        setYearCheck({ done: i + 1, total: linked.length, failed, finished: false });
+      }
+    } finally {
+      setYearCheck((c) => (c ? { ...c, finished: true } : c));
+      setRunning(false);
+    }
+  };
+
   const testPlay = async (song: Song) => {
     activateFromGesture();
     try {
@@ -112,6 +136,7 @@ export default function Songs() {
   };
 
   const resolved = songs.filter((s) => rows[s.id]?.uri).length;
+  const off = songs.filter((s) => yearOff(s, rows[s.id])).length;
 
   return (
     <Screen title="Låtlistan">
@@ -123,10 +148,20 @@ export default function Songs() {
         <button type="button" className="primary" disabled={running} onClick={() => void resolveAll()}>
           {running ? 'Söker…' : 'Hitta alla på Spotify'}
         </button>
+        <button type="button" disabled={running || resolved === 0} onClick={() => void checkYears()}>
+          {yearCheck && !yearCheck.finished ? `Kontrollerar… ${yearCheck.done} av ${yearCheck.total}` : 'Kontrollera år'}
+        </button>
         <button type="button" onClick={exportSongs}>Ladda ner songs.json</button>
         <button type="button" onClick={() => void pause()}>Pausa</button>
       </div>
       <ErrorText error={error ?? player.error} />
+      {yearCheck?.finished && (
+        <p className="muted" role="status">
+          {off === 0 ? 'Klart: inga avvikande år.' : `Klart: ${off} låtar har ett annat år på Spotify. Ofta är det en remaster eller samling, men kontrollera originalåret.`}
+          {yearCheck.failed > 0 && ` ${yearCheck.failed} gick inte att kontrollera.`}
+          {songs.length > yearCheck.total && ` ${songs.length - yearCheck.total} är inte kopplade till Spotify än.`}
+        </p>
+      )}
 
       <ul className="song-list">
         {songs.map((song) => {
@@ -137,7 +172,15 @@ export default function Songs() {
               <span className="card-year">{song.year}</span>
               <span className="song-text">
                 <span className="card-title">{song.title}</span>
-                <span className="card-artist">{song.artist}</span>
+                <span className="card-artist">
+                  {song.artist}
+                  {song.tags?.length ? ` · ${song.tags.join(', ')}` : ''}
+                </span>
+                {yearOff(song, row) && (
+                  <span className="year-off small">
+                    <span aria-hidden="true">⚠ </span>Spotify har {row!.spotifyYear}, vi har {song.year}
+                  </span>
+                )}
                 {row?.status === 'error' && <span className="error small">{row.message}</span>}
                 {row?.uri && <span className="muted small">{row.uri}</span>}
               </span>

@@ -1,4 +1,5 @@
 // Spelmotorn: rena funktioner utan Firebase eller Spotify, så att de går att enhetstesta.
+import type { SongTag } from './library';
 
 export type Song = {
   id: string;
@@ -6,6 +7,8 @@ export type Song = {
   title: string;
   artist: string;
   year: number;
+  /** Etiketter för spelledarens urval, se library.ts. */
+  tags?: SongTag[];
 };
 
 export type TimelineCard = {

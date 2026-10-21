@@ -15,6 +15,7 @@ import {
   type Song,
 } from '../engine/game';
 import { answerIndex, evaluateArtistChoice, pickChoices } from '../engine/artist';
+import type { SongFilter } from '../engine/library';
 import { db } from '../firebase';
 import { gameRef, moveRef, movesRef, privateRef, teamRef } from './refs';
 import { gameMode, teamLevel, type GameDoc, type GameMode, type MoveDoc, type PrivateState, type Team } from './types';
@@ -73,6 +74,13 @@ export async function setMode(code: string, mode: GameMode) {
 /** Familj-läget visar fyra artister för varje kort. Tidslinjeläget har inga. */
 const choicesFor = (game: GameDoc, song: Song, songs: Song[]) => (gameMode(game) === 'family' ? pickChoices(song, songs) : null);
 
+/** Bara i lobbyn: vilka låtar spelet drar ur. */
+export async function setSongFilter(code: string, filter: SongFilter) {
+  const batch = writeBatch(db);
+  batch.update(gameRef(code), { 'settings.songFilter': filter });
+  await batch.commit();
+}
+
 export async function removeTeam(code: string, uid: string) {
   const batch = writeBatch(db);
   batch.delete(teamRef(code, uid));
@@ -84,10 +92,21 @@ const songById = (songs: Song[]) => new Map(songs.map((s) => [s.id, s]));
 /** Hämtar albumbilden för ett kort. Ska ge null i stället för att kasta. */
 export type ArtLookup = (song: Song) => Promise<string | null>;
 
-export async function startGame(code: string, game: GameDoc, teams: Team[], songs: Song[], artFor: ArtLookup) {
+/**
+ * songs är hela låtlistan (för uppslag och Familj-lägets artistalternativ),
+ * deckSongs spelledarens urval som kortleken blandas ur.
+ */
+export async function startGame(
+  code: string,
+  game: GameDoc,
+  teams: Team[],
+  songs: Song[],
+  artFor: ArtLookup,
+  deckSongs: Song[] = songs,
+) {
   const setup = setupGame(
     teams.map((t) => t.uid),
-    songs.map((s) => s.id),
+    deckSongs.map((s) => s.id),
   );
   const byId = songById(songs);
   const first = drawCard(setup.deck);
