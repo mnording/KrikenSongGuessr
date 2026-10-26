@@ -95,6 +95,7 @@ export const sv = {
     slotHint: 'Lyssna och tryck på luckan där låten passar. **Tryck sedan Lås.**',
     otherLocked: (name: string) => `${name} har låst. Väntar på avslöjandet.`,
     guessAlong: 'Lyssna och gissa med!',
+    laterRelease: 'Spotify spelar en senare utgåva, till exempel en remaster. **Lägg låten efter året den först kom ut.**',
     lockedHere: 'Låst här',
     lockFailed: (error: string) => `Kunde inte låsa: ${error}`,
     showOurs: 'Visa vår tidslinje',

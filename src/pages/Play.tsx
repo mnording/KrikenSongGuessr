@@ -458,6 +458,11 @@ function InGame({ code, game, me, teams }: { code: string; game: GameDoc; me: Te
           locked ? t.play.otherLocked(current?.name ?? t.play.theTeam) : t.play.guessAlong
         ) : null}
       </p>
+      {game.phase === 'placing' && game.laterRelease === game.turnIndex && (
+        <p className="hint">
+          <Rich text={t.play.laterRelease} />
+        </p>
+      )}
 
       <FamilyRound
         code={code}

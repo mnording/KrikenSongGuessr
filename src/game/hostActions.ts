@@ -316,6 +316,13 @@ export async function playAgain(code: string, teams: Team[]) {
   if (!old.empty) await cleanup.commit();
 }
 
+/** Lagen får veta att turens spår är en senare utgåva och ska läggas efter originalåret. */
+export async function markLaterRelease(code: string, turnIndex: number) {
+  const batch = writeBatch(db);
+  batch.update(gameRef(code), { laterRelease: turnIndex });
+  await batch.commit();
+}
+
 export async function saveDeviceId(code: string, deviceId: string) {
   const batch = writeBatch(db);
   batch.set(privateRef(code), { spotifyDeviceId: deviceId }, { merge: true });

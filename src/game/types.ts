@@ -52,6 +52,8 @@ export type GameDoc = {
   choices?: string[] | null;
   /** Fortsätt eller lås: lagets osäkrade kort, som redan ligger i dess tidslinje. */
   streak?: Streak | null;
+  /** Turen då Spotify spelar en senare utgåva än originalet, till exempel en remaster. */
+  laterRelease?: number | null;
   createdAt?: Timestamp;
 };
 

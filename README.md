@@ -90,7 +90,7 @@ Utan `VITE_SENTRY_DSN` gör `reportError` ingenting, så det är ofarligt lokalt
 
 `src/data/songs.json` har titel, artist, originalår och ibland etiketter (`tags`). `spotifyUri` får vara tom: spelledarens telefon söker då fram spåret första gången och sparar svaret lokalt. Öppna `/host/songs`, tryck **Hitta alla på Spotify**, provspela, rätta fel träffar med ✎ och ladda ner en `songs.json` med URI:erna ifyllda.
 
-**Årtalen är hela spelet.** `year` ska vara låtens första utgivning, inte remasterns eller samlingens. Tryck **Kontrollera år** i `/host/songs` för att se låtar där Spotifys albumår skiljer sig med mer än ett år. Ofta är det en remaster, men ibland fel år hos oss.
+**Årtalen är hela spelet.** `year` ska vara låtens första utgivning, inte remasterns eller samlingens. Tryck **Kontrollera år** i `/host/songs` för att se låtar där Spotifys albumår skiljer sig med mer än ett år. Ofta är det en remaster, men ibland fel år hos oss. Under spelet hämtar spelledarens telefon albumåret för varje låt. Är det mer än ett år senare än vårt år får lagen en rad om att det är en senare utgåva och att låten ska läggas efter originalåret (inte i Film-läget).
 
 **Etiketter:** `svenskt`, `melodifestivalen`, `dans`, `rock` och `hiphop` (listan finns i `src/engine/library.ts`). En låt kan ha flera eller inga. I lobbyn väljer spelledaren decennier och etiketter (`settings.songFilter` på spelet). Inget valt betyder alla låtar, och inom decennier respektive etiketter räcker det att låten passar en av dem. Lobbyn varnar när urvalet kan ta slut innan någon vinner, och går inte att starta med färre låtar än lag. Film- och barnlåtar väntar på ett eget spelläge (#13).
 

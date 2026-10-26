@@ -159,6 +159,7 @@ export const es: Messages = {
     slotHint: 'Escuchen y toquen el hueco donde encaja la canción. **Luego toquen Confirmar.**',
     otherLocked: (name) => `${name} ya confirmó. Esperando la revelación.`,
     guessAlong: '¡Escuchen y adivinen también!',
+    laterRelease: 'Spotify está reproduciendo una edición posterior, como una remasterización. **Coloquen la canción según el año en que salió por primera vez.**',
     lockedHere: 'Confirmado aquí',
     lockFailed: (error) => `No se pudo confirmar: ${error}`,
     showOurs: 'Ver nuestra línea de tiempo',

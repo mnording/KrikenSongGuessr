@@ -18,6 +18,7 @@ import {
   finishGame,
   nextTurn,
   playAgain,
+  markLaterRelease,
   rememberHostGame,
   removeTeam,
   reveal,
@@ -32,7 +33,7 @@ import { gameRef, moveRef, privateRef, teamsRef } from '../game/refs';
 import { answersByChoice, choiceTexts, FAST_UNDO_MS, isFast, isStreak, MODES } from '../game/modes';
 import { gameMode, type GameDoc, type MoveDoc, type PrivateState, type StreakAction, type Team, type TeamDoc } from '../game/types';
 import { login } from '../spotify/auth';
-import { albumArt, loadFilms, loadSongs, resolveUri } from '../spotify/catalog';
+import { albumArt, isLaterRelease, loadFilms, loadSongs, resolveUri, spotifyYear } from '../spotify/catalog';
 import { posterUrl } from '../tmdb/match';
 
 /** Kortets bild: filmens affisch i Film-läget när den finns, annars albumbilden från Spotify. */
@@ -138,8 +139,17 @@ function HostView({ code, game, teams, state, songs }: ViewProps) {
     } catch (err) {
       reportError(err, 'spotify.play');
       setError(`Musiken: ${errorMessage(err)}`);
+      return;
     }
-  }, []);
+    // Filmkort har filmens premiärår, så albumets år säger inget om dem.
+    if (card.film) return;
+    try {
+      if (isLaterRelease(card, await spotifyYear(card))) await markLaterRelease(code, turnIndex);
+    } catch (err) {
+      // Bara en upplysning till lagen. Spelet går vidare utan den.
+      reportError(err, 'host.laterRelease');
+    }
+  }, [code]);
 
   /** Kör en spelhandling. activateFromGesture måste ske direkt i tryckningen (iOS). */
   // busy hinner inte sättas mellan två tryck i samma ögonblick. Den här spärren gör det.

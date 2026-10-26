@@ -155,7 +155,10 @@ export async function spotifyYear(song: Song): Promise<number | null> {
   }
 }
 
-type PlaylistItem = { item?: SearchTrack | null; track?: SearchTrack | null };
+/** Spotify spelar en utgåva som är mer än ett år senare än låten, ofta en remaster eller samling. */
+export const isLaterRelease = (song: Song, year: number | null | undefined) => year != null && year - song.year > 1;
+
+type PlaylistItem ={ item?: SearchTrack | null; track?: SearchTrack | null };
 
 /** Dev-verktyg: exporterar en egen spellista till samma format som songs.json. */
 export async function exportPlaylist(playlistId: string): Promise<Song[]> {

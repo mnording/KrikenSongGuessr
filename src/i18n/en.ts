@@ -159,6 +159,7 @@ export const en: Messages = {
     slotHint: 'Listen and tap the gap where the song fits. **Then tap Lock.**',
     otherLocked: (name) => `${name} has locked. Waiting for the reveal.`,
     guessAlong: 'Listen and guess along!',
+    laterRelease: 'Spotify is playing a later release, like a remaster. **Place the song by the year it first came out.**',
     lockedHere: 'Locked here',
     lockFailed: (error) => `Couldn't lock: ${error}`,
     showOurs: 'Show our timeline',
